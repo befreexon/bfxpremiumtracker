@@ -1,66 +1,65 @@
-"""BFX Portfolio Pro API — a thin FastAPI layer over engineer-investor-portfolio."""
+"""BFX Portfolio Pro API.
 
-from fastapi import FastAPI, HTTPException
+Three layers sit on top of one another:
+
+* **Portfolio** — what I own, and what it has actually earned. Lot-level FIFO,
+  currency decomposition, XIRR, the holding-period test.
+* **Watchlist** — what I want to own, and the price at which I would buy it.
+* **AI analýza** — a single instrument put under a lens.
+"""
+
+import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.analysis import AnalysisError, analyze_portfolio, compare_benchmark, optimize_portfolio, run_monte_carlo
-from app.schemas import (
-    AnalyzeResponse,
-    BenchmarkRequest,
-    BenchmarkResponse,
-    MonteCarloRequest,
-    MonteCarloResponse,
-    OptimizeRequest,
-    OptimizeResponse,
-    PortfolioRequest,
-)
+from app.config import CORS_ORIGINS
+from app.db import init_db
+from app.routers import auth, imports, overview, portfolios, prices, quant, snapshots, watchlist
+
+logging.basicConfig(level=logging.INFO)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    init_db()
+    yield
+
 
 app = FastAPI(
     title="BFX Portfolio Pro API",
-    description="Portfolio performance, benchmark, Monte Carlo, and optimization analytics.",
-    version="0.1.0",
+    description="Evidence portfolia, watchlist a analýza jednotlivých titulů.",
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[origin.strip() for origin in CORS_ORIGINS if origin.strip()],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth.router)
+app.include_router(portfolios.router)
+app.include_router(overview.router)
+app.include_router(prices.router)
+app.include_router(imports.router)
+app.include_router(watchlist.router)
+app.include_router(snapshots.router)
+app.include_router(quant.router)
+
+try:
+    from app.routers import ai
+
+    app.include_router(ai.router)
+except ImportError:  # pragma: no cover - the layer is optional
+    logging.getLogger(__name__).warning("Vrstva AI analýzy není k dispozici.")
 
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
-
-
-@app.post("/api/portfolio/analyze", response_model=AnalyzeResponse)
-def analyze(req: PortfolioRequest) -> AnalyzeResponse:
-    try:
-        return analyze_portfolio(req)
-    except AnalysisError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@app.post("/api/portfolio/benchmark", response_model=BenchmarkResponse)
-def benchmark(req: BenchmarkRequest) -> BenchmarkResponse:
-    try:
-        return compare_benchmark(req)
-    except AnalysisError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@app.post("/api/portfolio/monte-carlo", response_model=MonteCarloResponse)
-def monte_carlo(req: MonteCarloRequest) -> MonteCarloResponse:
-    try:
-        return run_monte_carlo(req)
-    except AnalysisError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@app.post("/api/portfolio/optimize", response_model=OptimizeResponse)
-def optimize(req: OptimizeRequest) -> OptimizeResponse:
-    try:
-        return optimize_portfolio(req)
-    except AnalysisError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc

@@ -1,0 +1,189 @@
+"""Assembles the on-screen portfolio from stored transactions, prices and rates."""
+
+from collections import defaultdict
+from datetime import date, timedelta
+
+from sqlalchemy.orm import Session
+
+from app.engine import fifo
+from app.engine.fifo import TxInput
+from app.engine.positions import PortfolioView, PositionView, build_portfolio, build_position
+from app.engine.xirr import CashFlow
+from app.models import Portfolio, Transaction, User
+from app.services import fx as fx_service
+from app.services import prices as price_service
+
+DIVIDEND_HORIZON_DAYS = 90
+
+
+def _to_tx_input(row: Transaction) -> TxInput:
+    return TxInput(
+        id=row.id,
+        type=row.type,
+        date=row.date,
+        quantity=row.quantity,
+        price=row.price,
+        currency=row.currency,
+        fee=row.fee or 0.0,
+        fx_rate=row.fx_rate,
+        note=row.note or "",
+    )
+
+
+def load_transactions(
+    db: Session, user: User, portfolio_ids: list[int] | None = None
+) -> list[Transaction]:
+    query = (
+        db.query(Transaction)
+        .join(Portfolio)
+        .filter(Portfolio.user_id == user.id)
+    )
+    if portfolio_ids:
+        query = query.filter(Transaction.portfolio_id.in_(portfolio_ids))
+    return query.order_by(Transaction.date, Transaction.id).all()
+
+
+def build_view(
+    db: Session,
+    user: User,
+    *,
+    portfolio_ids: list[int] | None = None,
+    today: date | None = None,
+    allow_fetch: bool = True,
+    force_refresh: bool = False,
+) -> PortfolioView:
+    """The full portfolio picture: positions, totals, allocation, warnings."""
+    today = today or date.today()
+    rows = load_transactions(db, user, portfolio_ids)
+
+    grouped: dict[str, list[Transaction]] = defaultdict(list)
+    for row in rows:
+        grouped[row.instrument_key].append(row)
+
+    instruments = [
+        (rows_[0].ticker, rows_[0].exchange, rows_[0].currency, rows_[0].asset_class)
+        for rows_ in grouped.values()
+    ]
+    quotes = price_service.get_prices(
+        db, user.id, instruments, allow_fetch=allow_fetch, force_refresh=force_refresh
+    )
+
+    currencies = {row.currency for row in rows}
+    current_rates = fx_service.rates_for_currencies(
+        db, currencies, today, allow_fetch=allow_fetch
+    )
+
+    positions: list[PositionView] = []
+    for key, tx_rows in grouped.items():
+        quote = quotes.get(key)
+        first = tx_rows[0]
+        name = next((r.name for r in tx_rows if r.name), "")
+
+        position = build_position(
+            ticker=first.ticker,
+            exchange=first.exchange,
+            currency=first.currency,
+            asset_class=first.asset_class,
+            name=name,
+            transactions=[_to_tx_input(r) for r in tx_rows],
+            current_price=quote.price if quote else None,
+            current_fx=current_rates.get(first.currency),
+            price_is_manual=bool(quote and quote.is_manual),
+            price_as_of=quote.as_of.isoformat() if quote and quote.as_of else None,
+            today=today,
+            tax_test_years=user.tax_test_years,
+            strict=False,
+        )
+        if quote and quote.error and position.missing_price:
+            position.warnings.append(quote.error)
+        positions.append(position)
+
+    positions.sort(key=lambda p: (p.total_gain_czk is None, -(p.total_gain_czk or 0.0)))
+
+    view = build_portfolio(
+        positions, today=today, xirr_flows=_portfolio_cash_flows(rows)
+    )
+    view.upcoming_dividends = upcoming_dividends(grouped, today)
+    return view
+
+
+def _portfolio_cash_flows(rows: list[Transaction]) -> list[CashFlow]:
+    """Every dated movement of the user's own money, for the portfolio XIRR."""
+    flows: list[CashFlow] = []
+    for row in rows:
+        tx = _to_tx_input(row)
+        rate = tx.effective_fx()
+        if rate is None:
+            continue
+        if row.type == fifo.BUY:
+            flows.append(CashFlow(row.date, -(row.quantity * row.price * rate + (row.fee or 0) * rate)))
+        elif row.type == fifo.SELL:
+            flows.append(CashFlow(row.date, row.quantity * row.price * rate - (row.fee or 0) * rate))
+        elif row.type == fifo.DIV:
+            flows.append(CashFlow(row.date, (row.price - (row.fee or 0)) * rate))
+    return flows
+
+
+def upcoming_dividends(
+    grouped: dict[str, list[Transaction]], today: date
+) -> list[dict]:
+    """Projects the next payment for instruments that have paid before.
+
+    Cadence is inferred from the gaps between past payments, so this is an
+    estimate from history and is labelled as one — not a company announcement.
+    """
+    upcoming: list[dict] = []
+
+    for key, rows in grouped.items():
+        dividends = sorted(
+            [r for r in rows if r.type == fifo.DIV], key=lambda r: r.date
+        )
+        if len(dividends) < 2:
+            continue
+
+        gaps = [
+            (dividends[i].date - dividends[i - 1].date).days
+            for i in range(1, len(dividends))
+        ]
+        # A median-ish gap is steadier than a mean when one payment was skipped.
+        average_gap = sorted(gaps)[len(gaps) // 2]
+        if average_gap <= 0:
+            continue
+
+        last = dividends[-1]
+        expected = last.date + timedelta(days=average_gap)
+        while expected < today:
+            expected += timedelta(days=average_gap)
+        if (expected - today).days > DIVIDEND_HORIZON_DAYS:
+            continue
+
+        current_quantity = fifo.run(
+            [_to_tx_input(r) for r in rows], strict=False
+        ).quantity
+        if current_quantity <= 0:
+            continue
+
+        quantity_then = fifo.run(
+            [_to_tx_input(r) for r in rows if r.date <= last.date], strict=False
+        ).quantity
+        rate = last.fx_rate if last.currency != "CZK" else 1.0
+
+        estimated = None
+        if quantity_then > 0 and rate:
+            per_share = (last.price - (last.fee or 0.0)) / quantity_then
+            estimated = per_share * current_quantity * rate
+
+        upcoming.append(
+            {
+                "instrument_key": key,
+                "ticker": last.ticker,
+                "expected_date": expected.isoformat(),
+                "days_away": (expected - today).days,
+                "estimated_net_czk": estimated,
+                "based_on_payments": len(dividends),
+                "cadence_days": average_gap,
+            }
+        )
+
+    upcoming.sort(key=lambda item: item["days_away"])
+    return upcoming

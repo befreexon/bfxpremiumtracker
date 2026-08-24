@@ -1,0 +1,5 @@
+typ,datum,ticker,burza,trida,mnozstvi,cena,mena,poplatek,kurz_czk,isin,nazev,portfolio,poznamka
+BUY,2024-01-15,AAPL,NASDAQ,STOCK,10,185.50,USD,8.5,,US0378331005,Apple Inc.,,
+BUY,2024-02-20,VWCE,XETRA,ETF,25,112.30,EUR,4.9,,IE00BK5BQT80,Vanguard FTSE All-World,,
+DIV,2024-05-10,AAPL,NASDAQ,STOCK,1,2.40,USD,0.36,,,,,"Hrubá částka celkem, do poplatku sražená daň"
+SELL,2024-06-01,AAPL,NASDAQ,STOCK,4,210.00,USD,8.5,,,,,

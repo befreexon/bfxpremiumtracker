@@ -1,0 +1,14 @@
+typ,datum,ticker,burza,trida,mnozstvi,cena,mena,poplatek,kurz_czk,isin,nazev,portfolio,poznamka
+BUY,2021-03-15,AAPL,NASDAQ,STOCK,20,120.50,USD,8.5,21.85,US0378331005,Apple Inc.,Hlavní,První nákup
+BUY,2021-09-02,AAPL,NASDAQ,STOCK,10,153.20,USD,8.5,21.60,US0378331005,Apple Inc.,Hlavní,Dokup
+DIV,2022-02-11,AAPL,NASDAQ,STOCK,1,6.60,USD,0.99,21.40,US0378331005,Apple Inc.,Hlavní,"Čtvrtletní dividenda, hrubá částka celkem"
+SELL,2023-05-10,AAPL,NASDAQ,STOCK,12,172.00,USD,8.5,21.90,US0378331005,Apple Inc.,Hlavní,Částečný prodej - FIFO bere nejstarší tranši
+BUY,2020-08-10,NVDA,NASDAQ,STOCK,8,52.00,USD,7,22.10,US67066G1040,NVIDIA,Hlavní,Nákup před splitem
+ADJUST,2021-07-20,NVDA,NASDAQ,STOCK,4,0,USD,,,US67066G1040,NVIDIA,Hlavní,Split 4:1 - do množství jde poměr
+BUY,2022-06-01,WIZZ,LSE,STOCK,150,1980,GBX,12,0.2870,JE00BN574F90,Wizz Air,Hlavní,Kotace v pencích - GBX není GBP
+BUY,2021-01-20,VWCE,XETRA,ETF,25,88.40,EUR,4.9,26.15,IE00BK5BQT80,Vanguard FTSE All-World,Hlavní,
+BUY,2023-02-14,MSFT,NASDAQ,STOCK,100,250.00,USD,-1850,22.30,US5949181045,Microsoft,Hlavní,"Přiřazení z prodané PUT - záporný poplatek snižuje základnu"
+BUY,2021-11-05,BTC,CRYPTO,CRYPTO,0.0385,61200.00,USD,15,22.05,,Bitcoin,Krypto,Desetinné množství
+BUY,2022-06-18,BTC,CRYPTO,CRYPTO,0.0123,19500.00,USD,6,23.80,,Bitcoin,Krypto,Nákup v propadu
+SELL,2024-03-05,BTC,CRYPTO,CRYPTO,0.02,64000.00,USD,20,23.10,,Bitcoin,Krypto,Částečný prodej napříč tranšemi
+BUY,2022-09-12,CEZ,PSE,STOCK,40,905.00,CZK,45,,CZ0005112300,ČEZ,Hlavní,Domácí akcie - kurz není potřeba

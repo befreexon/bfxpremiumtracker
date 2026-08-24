@@ -16,3 +16,7 @@ design-source/
 
 # OS
 .DS_Store
+
+# Local database
+backend/data/
+*.db

@@ -10,13 +10,13 @@ from portfolio_analysis import (
 )
 from app.schemas import (
     AnalyzeResponse,
-    BenchmarkRequest,
-    BenchmarkResponse,
     MonteCarloRequest,
     MonteCarloResponse,
     OptimizeRequest,
     OptimizeResponse,
     PortfolioRequest,
+    QuantBenchmarkRequest,
+    QuantBenchmarkResponse,
 )
 
 
@@ -71,7 +71,7 @@ def analyze_portfolio(req: PortfolioRequest) -> AnalyzeResponse:
     )
 
 
-def compare_benchmark(req: BenchmarkRequest) -> BenchmarkResponse:
+def compare_benchmark(req: QuantBenchmarkRequest) -> QuantBenchmarkResponse:
     if len(req.tickers) != len(req.weights):
         raise AnalysisError("Number of tickers must match number of weights.")
 
@@ -89,7 +89,7 @@ def compare_benchmark(req: BenchmarkRequest) -> BenchmarkResponse:
     portfolio_curve = (1 + comparison.portfolio_returns).cumprod()
     benchmark_curve = (1 + comparison.benchmark_returns).cumprod()
 
-    return BenchmarkResponse(
+    return QuantBenchmarkResponse(
         metrics=metrics,
         portfolio_curve=_series_points(portfolio_curve),
         benchmark_curve=_series_points(benchmark_curve),
