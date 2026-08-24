@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Input, Select } from '../design/components';
+import { parsePortfolioCsv } from '../lib/csv';
 import { BENCHMARK_OPTIONS, PRESET_PORTFOLIOS, usePortfolio } from '../state/portfolioContext';
 import logo from '../assets/logo.svg';
 
@@ -24,6 +25,23 @@ export function PortfolioBuilder() {
   const [riskFreeRate, setRiskFreeRate] = useState(String(portfolio.riskFreeRate));
   const [benchmarkTicker, setBenchmarkTicker] = useState(portfolio.benchmarkTicker);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCsvFile = (file: File) => {
+    file
+      .text()
+      .then((text) => {
+        const result = parsePortfolioCsv(text);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        setPreset('Custom');
+        setRows(result.rows.map((r) => ({ ticker: r.ticker, weight: String(r.weight) })));
+        setError(null);
+      })
+      .catch(() => setError('Could not read that file.'));
+  };
 
   const applyPreset = (name: string) => {
     setPreset(name);
@@ -103,7 +121,32 @@ export function PortfolioBuilder() {
             />
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <span style={{ fontSize: 13, color: 'var(--charcoal)', fontWeight: 600 }}>Holdings</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: 'var(--charcoal)', fontWeight: 600 }}>Holdings</span>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <a
+                    href="/portfolio-template.csv"
+                    download
+                    style={{ fontSize: 13, fontWeight: 600, color: 'var(--link)', textDecoration: 'none' }}
+                  >
+                    Download CSV template
+                  </a>
+                  <Button variant="soft" size="sm" onClick={() => fileInputRef.current?.click()}>
+                    Import CSV
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv,text/csv"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleCsvFile(file);
+                      e.target.value = '';
+                    }}
+                  />
+                </div>
+              </div>
               {rows.map((row, i) => (
                 <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                   <div style={{ flex: 2 }}>

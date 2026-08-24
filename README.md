@@ -17,7 +17,18 @@ frontend/   React + Vite app — BFX Premium Design components and dashboard pag
 
 ## Running it
 
-### Backend
+### Option A: Docker Compose (recommended)
+
+```bash
+docker compose up --build
+```
+
+Open http://localhost:5173. Editing files under `backend/app` or `frontend/src` reloads
+live (backend via `uvicorn --reload`, frontend via Vite HMR) — no rebuild needed.
+
+### Option B: run each half directly
+
+**Backend**
 
 ```bash
 cd backend
@@ -26,9 +37,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-Requires outbound internet access — it fetches live prices from Yahoo Finance via `yfinance`.
-
-### Frontend
+**Frontend**
 
 ```bash
 cd frontend
@@ -37,6 +46,9 @@ npm run dev
 ```
 
 Open http://localhost:5173. The dev server proxies `/api/*` to `http://localhost:8000`.
+
+Either way, the backend needs outbound internet access — it fetches live prices from Yahoo
+Finance via `yfinance`.
 
 ## What it does
 
@@ -49,8 +61,20 @@ Open http://localhost:5173. The dev server proxies `/api/*` to `http://localhost
 - **Optimize** — maximum Sharpe, minimum volatility, or risk parity portfolios, compared
   against your current weights.
 
-Start from a preset (Three-Fund, 60/40, All-Weather, Golden Butterfly, …) or enter your own
-tickers and weights on the builder screen.
+Start from a preset (Three-Fund, 60/40, All-Weather, Golden Butterfly, …), enter your own
+tickers and weights, or **import a CSV** — click "Import CSV" on the builder screen, or
+download the template first (`frontend/public/portfolio-template.csv`):
+
+```csv
+ticker,weight
+VTI,0.4
+VXUS,0.2
+BND,0.4
+```
+
+The `weight` column accepts either fractions (`0.4`) or percentages (`40` or `40%`) — it's
+auto-detected from the column total. Column names `symbol`/`allocation`/`pct`/`%` are also
+recognized as aliases for `ticker`/`weight`.
 
 ## Design system
 
