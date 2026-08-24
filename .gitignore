@@ -1,0 +1,18 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Design authoring bundle (source-of-truth assets are copied into frontend/src/design)
+design-source/
+
+# Env
+.env
+.env.local
+
+# OS
+.DS_Store
