@@ -258,3 +258,28 @@ def test_czk_trades_need_no_rate_at_all():
 
     assert result.missing_fx_transaction_ids == []
     assert result.open_cost_czk == pytest.approx(2_500.0)
+
+
+# --- Sale without a known rate --------------------------------------------
+
+
+def test_a_sale_without_a_rate_books_no_result_rather_than_a_fake_loss():
+    result = fifo.run([
+        buy(date(2020, 1, 10), 10, 100.0, fx=23.0),
+        sell(date(2021, 1, 10), 4, 120.0, fx=None, tx_id=9),
+    ])
+
+    # Valuing the proceeds at a rate of zero would book the whole cost basis as
+    # a loss, which looks like a real number and would reach the portfolio total.
+    assert result.sales == []
+    assert result.realized_gain_czk == pytest.approx(0.0)
+    assert result.missing_fx_transaction_ids == [9]
+
+
+def test_a_sale_without_a_rate_still_reduces_the_holding():
+    result = fifo.run([
+        buy(date(2020, 1, 10), 10, 100.0, fx=23.0),
+        sell(date(2021, 1, 10), 4, 120.0, fx=None, tx_id=9),
+    ])
+
+    assert result.quantity == pytest.approx(6)

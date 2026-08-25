@@ -186,7 +186,7 @@ def build_position(
     view.realized_gain_czk = engine.realized_gain_czk
     view.gross_dividends_czk = engine.gross_dividends_czk
     view.net_dividends_czk = engine.net_dividends_czk
-    view.missing_fx = bool(engine.missing_fx_transaction_ids)
+    view.missing_fx = engine.has_missing_fx
     view.missing_price = current_price is None and engine.quantity > 0
 
     if current_price is not None and current_fx is not None:
@@ -202,7 +202,20 @@ def build_position(
         view.value_czk = 0.0
         view.unrealized_gain_czk = 0.0
 
-    if view.unrealized_gain_czk is not None:
+    if view.missing_fx:
+        # A lot bought without a known rate contributes nothing to the cost
+        # basis, so every figure derived from it would be understated. Better to
+        # show nothing and say why than to show a number that looks right.
+        view.cost_czk = 0.0
+        view.total_buy_cost_czk = 0.0
+        view.unrealized_gain_czk = None
+        view.price_effect_czk = None
+        view.fx_effect_czk = None
+        view.warnings.append(
+            "U některé transakce chybí kurz k datu obchodu, zisk se proto nepočítá. "
+            "Doplň kurzy a čísla se dopočítají."
+        )
+    elif view.unrealized_gain_czk is not None:
         view.total_gain_czk = (
             view.unrealized_gain_czk + view.realized_gain_czk + view.net_dividends_czk
         )

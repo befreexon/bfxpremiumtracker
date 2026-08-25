@@ -292,3 +292,19 @@ def test_allocation_splits_by_class_and_by_currency():
     assert {slice.label for slice in view.allocation_by_class} == {"STOCK", "ETF"}
     assert {slice.label for slice in view.allocation_by_currency} == {"USD", "EUR"}
     assert sum(slice.weight for slice in view.allocation_by_class) == pytest.approx(1.0)
+
+
+def test_a_position_with_a_rateless_transaction_reports_no_gain(capsys=None):
+    view = position(
+        [
+            buy(date(2020, 1, 10), 10, 100.0, fx=None),
+            buy(date(2021, 1, 10), 5, 120.0, fx=22.0),
+        ],
+        price=150.0,
+        fx=25.0,
+    )
+
+    assert view.missing_fx
+    assert view.total_gain_czk is None
+    assert view.price_effect_czk is None
+    assert any("kurz" in warning for warning in view.warnings)

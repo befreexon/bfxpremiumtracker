@@ -109,7 +109,10 @@ class EngineResult:
     #: the denominator for the return of a fully closed position.
     closed_cost_czk: float = 0.0
     #: Transactions the engine could not express in CZK for lack of an FX rate.
+    #: The ids point the user at the offending rows; the flag is what the rest of
+    #: the code tests, because a transaction without an id is just as unusable.
     missing_fx_transaction_ids: list[int] = field(default_factory=list)
+    has_missing_fx: bool = False
     warnings: list[str] = field(default_factory=list)
 
     @property
@@ -201,8 +204,8 @@ def run(transactions: list[TxInput], *, strict: bool = True) -> EngineResult:
 
 
 def _apply_buy(result: EngineResult, tx: TxInput, fx: float | None) -> None:
-    if fx is None and tx.id is not None:
-        result.missing_fx_transaction_ids.append(tx.id)
+    if fx is None:
+        _note_missing_fx(result, tx)
     result.lots.append(
         Lot(
             quantity=tx.quantity,
@@ -216,9 +219,41 @@ def _apply_buy(result: EngineResult, tx: TxInput, fx: float | None) -> None:
     )
 
 
-def _apply_sell(result: EngineResult, tx: TxInput, fx: float | None, *, strict: bool) -> None:
-    if fx is None and tx.id is not None:
+def _note_missing_fx(result: EngineResult, tx: TxInput) -> None:
+    result.has_missing_fx = True
+    if tx.id is not None:
         result.missing_fx_transaction_ids.append(tx.id)
+
+
+def _consume_lots(result: EngineResult, quantity: float) -> None:
+    """Removes shares FIFO without booking a result.
+
+    Used when a sale cannot be valued in CZK: the holding must still shrink, or
+    every later number about this position would be wrong too.
+    """
+    remaining = quantity
+    for lot in result.lots:
+        if remaining <= 1e-12:
+            break
+        taken = min(lot.quantity, remaining)
+        lot.fee_czk -= lot.fee_czk * (taken / lot.quantity) if lot.quantity else 0.0
+        lot.quantity -= taken
+        remaining -= taken
+
+
+def _apply_sell(result: EngineResult, tx: TxInput, fx: float | None, *, strict: bool) -> None:
+    if fx is None:
+        # Consume the lots so the share count stays right, but record no
+        # realised result. Valuing the proceeds at a rate of zero would book the
+        # entire cost basis as a loss — a fabricated number that looks real and
+        # would flow straight into the portfolio total.
+        _note_missing_fx(result, tx)
+        result.warnings.append(
+            f"{tx.date.isoformat()}: prodej bez kurzu k datu obchodu, "
+            f"realizovaný zisk se nepočítá. Doplň kurz."
+        )
+        _consume_lots(result, min(tx.quantity, sum(lot.quantity for lot in result.lots)))
+        return
 
     available = sum(lot.quantity for lot in result.lots)
     if tx.quantity - available > 1e-9:
@@ -233,9 +268,9 @@ def _apply_sell(result: EngineResult, tx: TxInput, fx: float | None, *, strict: 
     if remaining <= 0:
         return
 
-    sell_fx = fx if fx is not None else 0.0
+    sell_fx = fx
     total_sell_qty = remaining
-    sell_fee_czk = (tx.fee * sell_fx) if fx is not None else 0.0
+    sell_fee_czk = tx.fee * sell_fx
 
     for lot in result.lots:
         if remaining <= 1e-12:
@@ -277,8 +312,7 @@ def _apply_sell(result: EngineResult, tx: TxInput, fx: float | None, *, strict: 
 def _apply_dividend(result: EngineResult, tx: TxInput, fx: float | None) -> None:
     """`price` carries the gross total for the whole payment, `fee` the tax withheld."""
     if fx is None:
-        if tx.id is not None:
-            result.missing_fx_transaction_ids.append(tx.id)
+        _note_missing_fx(result, tx)
         return
 
     gross_czk = tx.price * fx
