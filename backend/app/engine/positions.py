@@ -119,7 +119,19 @@ class PortfolioView:
     #: here, since it depends on data this pure engine has no access to.
     allocation_by_segment: list[AllocationSlice] = field(default_factory=list)
     concentration_warnings: list[dict] = field(default_factory=list)
+    #: Cadence-projected future payments over the next 12 months, one entry per
+    #: expected payment (an instrument paying quarterly contributes up to four).
+    #: An estimate from payment history, not a company announcement.
     upcoming_dividends: list[dict] = field(default_factory=list)
+
+    #: Trailing 12 months of dividends actually received, net of withheld tax.
+    trailing_12m_dividends_czk: float = 0.0
+    #: That total as a share of the portfolio's current value / total cost
+    #: basis. None when there is no value or cost basis to divide by.
+    dividend_yield_pct: float | None = None
+    dividend_yield_on_cost_pct: float | None = None
+    #: Same trailing-12-month total, split by instrument, sorted descending.
+    dividends_by_instrument: list[dict] = field(default_factory=list)
 
     #: Open positions, and the same count split by asset class (e.g. {"STOCK": 16, "ETF": 2}).
     position_count: int = 0

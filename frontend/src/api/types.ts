@@ -160,6 +160,10 @@ export interface Overview {
   allocation_by_segment: AllocationSlice[];
   concentration_warnings: ConcentrationWarning[];
   upcoming_dividends: UpcomingDividend[];
+  trailing_12m_dividends_czk: number;
+  dividend_yield_pct: number | null;
+  dividend_yield_on_cost_pct: number | null;
+  dividends_by_instrument: { ticker: string; value_czk: number }[];
   position_count: number;
   position_count_by_class: Record<string, number>;
   ytd_sales_volume_czk: number;

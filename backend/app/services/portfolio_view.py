@@ -20,7 +20,7 @@ from app.services import fx as fx_service
 from app.services import prices as price_service
 from app.services import snapshots as snapshot_service
 
-DIVIDEND_HORIZON_DAYS = 90
+DIVIDEND_HORIZON_DAYS = 365
 
 
 def _to_tx_input(row: Transaction) -> TxInput:
@@ -111,6 +111,7 @@ def build_view(
         positions, today=today, xirr_flows=_portfolio_cash_flows(rows)
     )
     view.upcoming_dividends = upcoming_dividends(grouped, today)
+    _fill_dividend_income(view, rows, today)
 
     resolved_ids = portfolio_ids or [
         p.id for p in db.query(Portfolio).filter(Portfolio.user_id == user.id)
@@ -118,6 +119,45 @@ def build_view(
     _fill_ytd_return(db, view, rows, resolved_ids, today)
     _fill_segment_allocation(db, view, user)
     return view
+
+
+def _fill_dividend_income(view: PortfolioView, rows: list[Transaction], today: date) -> None:
+    """Trailing 12 months of dividends actually received — a look back, unlike
+    upcoming_dividends which projects forward. Yield is this total over the
+    portfolio's current value; yield on cost is the same total over what was
+    ever paid in, which does not move when prices do."""
+    cutoff = today - timedelta(days=365)
+    totals_by_ticker: dict[str, float] = {}
+    trailing_total = 0.0
+    incomplete = False
+
+    for row in rows:
+        if row.type != fifo.DIV or not (cutoff <= row.date <= today):
+            continue
+        fx = _to_tx_input(row).effective_fx()
+        if fx is None:
+            incomplete = True
+            continue
+        net = (row.price - (row.fee or 0.0)) * fx
+        trailing_total += net
+        totals_by_ticker[row.ticker] = totals_by_ticker.get(row.ticker, 0.0) + net
+
+    view.trailing_12m_dividends_czk = trailing_total
+    view.dividends_by_instrument = [
+        {"ticker": ticker, "value_czk": value}
+        for ticker, value in sorted(totals_by_ticker.items(), key=lambda kv: -kv[1])
+    ]
+    if view.value_czk:
+        view.dividend_yield_pct = trailing_total / view.value_czk * 100.0
+
+    cost_basis = sum(p.total_buy_cost_czk for p in view.positions)
+    if cost_basis:
+        view.dividend_yield_on_cost_pct = trailing_total / cost_basis * 100.0
+
+    if incomplete:
+        view.warnings.append(
+            "Výnos z dividend nezahrnuje výplaty bez známého kurzu k datu obchodu."
+        )
 
 
 def _fill_segment_allocation(db: Session, view: PortfolioView, user: User) -> None:
@@ -243,13 +283,23 @@ def _portfolio_cash_flows(rows: list[Transaction]) -> list[CashFlow]:
     return flows
 
 
+#: A safety cap on how many future payments one instrument can contribute,
+#: independent of the day horizon — a data glitch producing a near-zero gap
+#: must not turn into an unbounded loop.
+MAX_PROJECTED_PAYMENTS = 8
+
+
 def upcoming_dividends(
     grouped: dict[str, list[Transaction]], today: date
 ) -> list[dict]:
-    """Projects the next payment for instruments that have paid before.
+    """Projects future payments for instruments that have paid before, one
+    entry per expected payment over the next DIVIDEND_HORIZON_DAYS — a
+    quarterly payer contributes up to four.
 
     Cadence is inferred from the gaps between past payments, so this is an
-    estimate from history and is labelled as one — not a company announcement.
+    estimate from history and is labelled as one — not a company announcement,
+    and it carries only the payment date, since there is no historical record
+    of the separate ex-dividend date to project from.
     """
     upcoming: list[dict] = []
 
@@ -269,19 +319,13 @@ def upcoming_dividends(
         if average_gap <= 0:
             continue
 
-        last = dividends[-1]
-        expected = last.date + timedelta(days=average_gap)
-        while expected < today:
-            expected += timedelta(days=average_gap)
-        if (expected - today).days > DIVIDEND_HORIZON_DAYS:
-            continue
-
         current_quantity = fifo.run(
             [_to_tx_input(r) for r in rows], strict=False
         ).quantity
         if current_quantity <= 0:
             continue
 
+        last = dividends[-1]
         quantity_then = fifo.run(
             [_to_tx_input(r) for r in rows if r.date <= last.date], strict=False
         ).quantity
@@ -292,17 +336,25 @@ def upcoming_dividends(
             per_share = (last.price - (last.fee or 0.0)) / quantity_then
             estimated = per_share * current_quantity * rate
 
-        upcoming.append(
-            {
-                "instrument_key": key,
-                "ticker": last.ticker,
-                "expected_date": expected.isoformat(),
-                "days_away": (expected - today).days,
-                "estimated_net_czk": estimated,
-                "based_on_payments": len(dividends),
-                "cadence_days": average_gap,
-            }
-        )
+        expected = last.date + timedelta(days=average_gap)
+        while expected < today:
+            expected += timedelta(days=average_gap)
+
+        projected = 0
+        while (expected - today).days <= DIVIDEND_HORIZON_DAYS and projected < MAX_PROJECTED_PAYMENTS:
+            upcoming.append(
+                {
+                    "instrument_key": key,
+                    "ticker": last.ticker,
+                    "expected_date": expected.isoformat(),
+                    "days_away": (expected - today).days,
+                    "estimated_net_czk": estimated,
+                    "based_on_payments": len(dividends),
+                    "cadence_days": average_gap,
+                }
+            )
+            expected += timedelta(days=average_gap)
+            projected += 1
 
     upcoming.sort(key=lambda item: item["days_away"])
     return upcoming

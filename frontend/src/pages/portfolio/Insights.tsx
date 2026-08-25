@@ -17,8 +17,9 @@ import { snapshots as snapshotApi } from '../../api/client';
 import type { AllocationSlice, BenchmarkComparison, Overview, Snapshot } from '../../api/types';
 import { Button } from '../../design/components';
 import { NUMERIC_STYLE, TONE_COLOR_ON_DARK, arrowFor, czk, date as formatDate, share, toneFor } from '../../lib/format';
+import { Dividends } from './Dividends';
 import { Segments } from './Segments';
-import { CAPTION, EYEBROW, PANEL, SECTION_TITLE, errorText } from './theme';
+import { CAPTION, PANEL, SECTION_TITLE, errorText } from './theme';
 import { TransactionJournal } from './TransactionJournal';
 
 interface InsightsProps {
@@ -40,7 +41,7 @@ export function Insights({ data, scopeIds, benchmarkTicker, onChanged }: Insight
       </div>
       <Segments data={data} onChanged={onChanged} />
       <Concentration data={data} />
-      <DividendCalendar data={data} />
+      <Dividends data={data} />
       <TransactionJournal scopeIds={scopeIds} />
     </div>
   );
@@ -381,37 +382,3 @@ function BenchmarkLine({
   );
 }
 
-function DividendCalendar({ data }: { data: Overview }) {
-  if (data.upcoming_dividends.length === 0) return null;
-
-  return (
-    <section style={PANEL}>
-      <h3 style={SECTION_TITLE}>Očekávané dividendy</h3>
-      <p style={{ ...CAPTION, marginTop: 6 }}>
-        Odhad z historické kadence výplat, ne oznámení společnosti.
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
-        {data.upcoming_dividends.map((item) => (
-          <div
-            key={item.instrument_key}
-            style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}
-          >
-            <span style={{ fontSize: 14, fontWeight: 600, width: 72 }}>{item.ticker}</span>
-            <span style={{ fontSize: 13, color: 'var(--on-dark-mute)', width: 130 }}>
-              {formatDate(item.expected_date)}
-            </span>
-            <span style={{ fontSize: 13, color: 'var(--on-dark-mute)', width: 90 }}>
-              za {item.days_away} dní
-            </span>
-            <span style={{ fontSize: 14, ...NUMERIC_STYLE, minWidth: 110 }}>
-              {czk(item.estimated_net_czk)}
-            </span>
-            <span style={{ ...EYEBROW, letterSpacing: 0 }}>
-              z {item.based_on_payments} výplat
-            </span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}

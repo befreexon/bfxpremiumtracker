@@ -1,6 +1,6 @@
 """End-to-end walk through the API, from registration to a full overview."""
 
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -743,3 +743,86 @@ def test_one_account_cannot_see_anothers_transaction_journal(client):
     journal = client.get("/api/transactions", headers=auth(theirs)).json()
 
     assert journal == []
+
+
+# --- Dividend income (trailing 12 months) and the forward calendar ---------
+
+
+def add_dividend(client, token, portfolio_id, **overrides):
+    payload = {
+        "type": "DIV",
+        "date": date.today().isoformat(),
+        "ticker": "AAPL",
+        "exchange": "NASDAQ",
+        "asset_class": "STOCK",
+        "quantity": 1,
+        "price": 100.0,
+        "currency": "CZK",
+        "fee": 15.0,
+        "fx_rate": None,
+    }
+    payload.update(overrides)
+    return client.post(
+        f"/api/portfolios/{portfolio_id}/transactions", headers=auth(token), json=payload
+    )
+
+
+def test_trailing_12m_dividend_yield_and_by_instrument(client):
+    token = register(client)
+    portfolio_id = client.get("/api/portfolios", headers=auth(token)).json()[0]["id"]
+    add_transaction(client, token, portfolio_id, ticker="AAPL", currency="CZK", fx_rate=None, price=100.0, quantity=10, fee=0.0)
+    client.put(
+        "/api/prices/manual",
+        headers=auth(token),
+        json={"instrument_key": "AAPL|NASDAQ|CZK", "price": 100.0},
+    )
+    add_dividend(client, token, portfolio_id, price=100.0, fee=15.0)
+
+    overview = client.get("/api/overview", headers=auth(token)).json()
+
+    assert overview["trailing_12m_dividends_czk"] == pytest.approx(85.0)
+    assert len(overview["dividends_by_instrument"]) == 1
+    assert overview["dividends_by_instrument"][0]["ticker"] == "AAPL"
+    assert overview["dividends_by_instrument"][0]["value_czk"] == pytest.approx(85.0)
+    # Value and cost basis both come to 1000 Kč here (10 shares at 100), so
+    # yield and yield-on-cost coincide.
+    assert overview["dividend_yield_pct"] == pytest.approx(8.5)
+    assert overview["dividend_yield_on_cost_pct"] == pytest.approx(8.5)
+
+
+def test_dividends_older_than_a_year_do_not_count_towards_the_yield(client):
+    token = register(client)
+    portfolio_id = client.get("/api/portfolios", headers=auth(token)).json()[0]["id"]
+    add_transaction(
+        client, token, portfolio_id, ticker="AAPL", currency="CZK", fx_rate=None,
+        price=100.0, quantity=10, date="2015-01-01",
+    )
+    old_date = (date.today() - timedelta(days=400)).isoformat()
+    recent_date = (date.today() - timedelta(days=10)).isoformat()
+    add_dividend(client, token, portfolio_id, date=old_date, price=999.0, fee=0.0)
+    add_dividend(client, token, portfolio_id, date=recent_date, price=50.0, fee=0.0)
+
+    overview = client.get("/api/overview", headers=auth(token)).json()
+
+    assert overview["trailing_12m_dividends_czk"] == pytest.approx(50.0)
+
+
+def test_upcoming_dividends_projects_several_payments_within_a_year(client):
+    token = register(client)
+    portfolio_id = client.get("/api/portfolios", headers=auth(token)).json()[0]["id"]
+    add_transaction(
+        client, token, portfolio_id, ticker="AAPL", currency="CZK", fx_rate=None,
+        price=100.0, quantity=10, date="2015-01-01",
+    )
+    first = (date.today() - timedelta(days=180)).isoformat()
+    second = (date.today() - timedelta(days=89)).isoformat()  # ~91-day cadence
+    add_dividend(client, token, portfolio_id, date=first, price=50.0, fee=0.0)
+    add_dividend(client, token, portfolio_id, date=second, price=50.0, fee=0.0)
+
+    overview = client.get("/api/overview", headers=auth(token)).json()
+    entries = [row for row in overview["upcoming_dividends"] if row["ticker"] == "AAPL"]
+
+    assert len(entries) >= 3
+    assert all(row["days_away"] <= 365 for row in entries)
+    gaps = [entries[i + 1]["days_away"] - entries[i]["days_away"] for i in range(len(entries) - 1)]
+    assert all(gap == gaps[0] for gap in gaps)
