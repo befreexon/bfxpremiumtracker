@@ -27,6 +27,11 @@ ANTHROPIC_MODEL = os.getenv("BFX_ANTHROPIC_MODEL", "claude-sonnet-4-6")
 
 BASE_CURRENCY = "CZK"
 
+# Creates a populated demo@bfxportfolio.cz account on first startup so a fresh
+# deployment has something to look at immediately. Idempotent either way —
+# see app.seed — but easy to turn off once the demo account isn't wanted.
+SEED_DEMO_ACCOUNT = os.getenv("BFX_SEED_DEMO", "true").lower() not in ("false", "0", "")
+
 # Price cache lifetimes, in seconds.
 PRICE_CACHE_TTL = 6 * 60 * 60
 PRICE_CACHE_TTL_CRYPTO = 15 * 60

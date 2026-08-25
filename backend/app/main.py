@@ -15,8 +15,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import CORS_ORIGINS
-from app.db import init_db
+from app.config import CORS_ORIGINS, SEED_DEMO_ACCOUNT
+from app.db import SessionLocal, init_db
+from app.seed import seed_demo_account
 from app.routers import (
     auth,
     imports,
@@ -38,6 +39,14 @@ logging.basicConfig(level=logging.INFO)
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     init_db()
+    if SEED_DEMO_ACCOUNT:
+        db = SessionLocal()
+        try:
+            seed_demo_account(db)
+        except Exception:  # a broken seed must never block the app from starting
+            logging.getLogger(__name__).exception("Nepodařilo se založit demo účet.")
+        finally:
+            db.close()
     yield
 
 

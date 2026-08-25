@@ -5,6 +5,11 @@ import { useAuth } from '../state/authContext';
 
 type Mode = 'signin' | 'signup';
 
+// Must match DEMO_EMAIL / DEMO_PASSWORD in backend/app/seed.py — that's what
+// creates this account on first startup.
+const DEMO_EMAIL = 'demo@bfxportfolio.cz';
+const DEMO_PASSWORD = 'Ukazka2026';
+
 export function SignIn() {
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<Mode>('signin');
@@ -16,16 +21,18 @@ export function SignIn() {
 
   const isSignUp = mode === 'signup';
 
-  const submit = async () => {
-    if (!email.trim()) {
+  const submit = async (overrideEmail?: string, overridePassword?: string) => {
+    const emailToUse = overrideEmail ?? email;
+    const passwordToUse = overridePassword ?? password;
+    if (!emailToUse.trim()) {
       setError('Zadej e-mail.');
       return;
     }
-    if (isSignUp && password.length < 8) {
+    if (isSignUp && passwordToUse.length < 8) {
       setError('Heslo musí mít alespoň 8 znaků.');
       return;
     }
-    if (!password) {
+    if (!passwordToUse) {
       setError('Zadej heslo.');
       return;
     }
@@ -33,13 +40,20 @@ export function SignIn() {
     setBusy(true);
     setError(null);
     try {
-      if (isSignUp) await signUp(email.trim(), password, displayName.trim());
-      else await signIn(email.trim(), password);
+      if (isSignUp) await signUp(emailToUse.trim(), passwordToUse, displayName.trim());
+      else await signIn(emailToUse.trim(), passwordToUse);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Přihlášení se nepodařilo.');
     } finally {
       setBusy(false);
     }
+  };
+
+  const signInAsDemo = () => {
+    setMode('signin');
+    setEmail(DEMO_EMAIL);
+    setPassword(DEMO_PASSWORD);
+    void submit(DEMO_EMAIL, DEMO_PASSWORD);
   };
 
   const switchMode = () => {
@@ -132,7 +146,7 @@ export function SignIn() {
               </div>
             )}
 
-            <Button size="lg" onClick={submit} disabled={busy}>
+            <Button size="lg" onClick={() => void submit()} disabled={busy}>
               {busy ? 'Pracuji…' : isSignUp ? 'Založit účet' : 'Přihlásit se'}
             </Button>
 
@@ -154,6 +168,44 @@ export function SignIn() {
             </button>
           </div>
         </Card>
+
+        <div
+          style={{
+            border: '1px solid var(--hairline-light)',
+            borderRadius: 'var(--radius-md)',
+            padding: '14px 16px',
+            background: 'var(--surface-soft)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>
+            Chceš si to jen prohlédnout?
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--mute)', lineHeight: 1.5 }}>
+            Demo účet má naplněné portfolio, watchlist, vlastní sekce i poznámky —{' '}
+            <strong style={{ color: 'var(--ink)' }}>{DEMO_EMAIL}</strong> / heslo{' '}
+            <strong style={{ color: 'var(--ink)' }}>{DEMO_PASSWORD}</strong>.
+          </div>
+          <button
+            type="button"
+            onClick={signInAsDemo}
+            disabled={busy}
+            style={{
+              alignSelf: 'flex-start',
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: busy ? 'default' : 'pointer',
+              color: 'var(--link)',
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            Přihlásit se demo účtem
+          </button>
+        </div>
 
         <p style={{ color: 'var(--ash)', fontSize: 13, lineHeight: 1.5, margin: 0 }}>
           Nástroj slouží k osobní evidenci. Neposkytuje investiční ani daňové poradenství.
