@@ -1,5 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Area, AreaChart, CartesianGrid, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { snapshots as snapshotApi } from '../../api/client';
 import type { AllocationSlice, BenchmarkComparison, Overview, Snapshot } from '../../api/types';
 import { Button } from '../../design/components';
@@ -17,6 +30,7 @@ export function Insights({ data, scopeIds, benchmarkTicker }: InsightsProps) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <ValueChart scopeIds={scopeIds} />
       <BenchmarkLine scopeIds={scopeIds} fallbackTicker={benchmarkTicker} />
+      <InstrumentDonut slices={data.allocation_by_instrument} />
       <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
         <Allocation title="Podle třídy aktiv" slices={data.allocation_by_class} />
         <Allocation title="Podle měny" slices={data.allocation_by_currency} />
@@ -24,6 +38,93 @@ export function Insights({ data, scopeIds, benchmarkTicker }: InsightsProps) {
       <Concentration data={data} />
       <DividendCalendar data={data} />
     </div>
+  );
+}
+
+// Rotates through the palette rather than assigning a fixed brand colour per
+// ticker — with an open-ended set of instruments there is no fixed mapping
+// that stays meaningful, so the donut favours distinguishing slices instead.
+const DONUT_COLORS = [
+  '#dcb45c', '#6f9bc4', '#7fbf8f', '#e3897f', '#b89bd6',
+  '#e8c878', '#8fb0c9', '#a3d1ae', '#eba99f', '#c9b3e0',
+];
+
+function InstrumentDonut({ slices }: { slices: AllocationSlice[] }) {
+  if (slices.length === 0) return null;
+
+  // Beyond a handful of slices a pie stops being readable — the smallest
+  // instruments are folded into one "Ostatní" wedge instead of a ring of
+  // slivers nobody can click.
+  const MAX_SLICES = 7;
+  const shown = slices.slice(0, MAX_SLICES);
+  const rest = slices.slice(MAX_SLICES);
+  const chartData =
+    rest.length > 0
+      ? [
+          ...shown,
+          {
+            label: 'Ostatní',
+            value_czk: rest.reduce((sum, s) => sum + s.value_czk, 0),
+            weight: rest.reduce((sum, s) => sum + s.weight, 0),
+          },
+        ]
+      : shown;
+
+  return (
+    <section style={PANEL}>
+      <h3 style={SECTION_TITLE}>Složení podle titulů</h3>
+      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center', marginTop: 14 }}>
+        <div style={{ width: 220, height: 220, flexShrink: 0 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={chartData}
+                dataKey="value_czk"
+                nameKey="label"
+                innerRadius="58%"
+                outerRadius="100%"
+                paddingAngle={1}
+                stroke="var(--canvas-dark)"
+                strokeWidth={2}
+              >
+                {chartData.map((slice, index) => (
+                  <Cell key={slice.label} fill={DONUT_COLORS[index % DONUT_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  background: '#2d2f2c',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 10,
+                  color: '#fff',
+                }}
+                formatter={(value, _name, item) => [czk(Number(value)), item?.payload?.label]}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '1 1 220px', minWidth: 200 }}>
+          {chartData.map((slice, index) => (
+            <div key={slice.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 'var(--radius-full)',
+                  background: DONUT_COLORS[index % DONUT_COLORS.length],
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontSize: 14, flex: 1 }}>{slice.label}</span>
+              <span style={{ fontSize: 13, color: 'var(--on-dark-mute)', ...NUMERIC_STYLE }}>
+                {share(slice.weight)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 

@@ -542,3 +542,55 @@ def test_the_ai_layer_reports_a_clean_error_when_data_is_unreachable(client):
     assert response.status_code in (200, 502)
     if response.status_code == 502:
         assert response.json()["detail"]
+
+
+# --- YTD metrics -------------------------------------------------------
+
+
+def test_ytd_gain_is_unavailable_without_a_snapshot_this_year(client):
+    token = register(client)
+    portfolio_id = client.get("/api/portfolios", headers=auth(token)).json()[0]["id"]
+    add_transaction(client, token, portfolio_id, currency="CZK", fx_rate=None, price=100.0)
+
+    overview = client.get("/api/overview", headers=auth(token)).json()
+
+    assert overview["ytd_gain_czk"] is None
+    assert overview["ytd_unavailable_reason"] is not None
+
+
+def test_ytd_gain_is_computed_from_the_years_earliest_snapshot(client):
+    token = register(client)
+    portfolio_id = client.get("/api/portfolios", headers=auth(token)).json()[0]["id"]
+    add_transaction(client, token, portfolio_id, currency="CZK", fx_rate=None, price=100.0, quantity=10)
+    client.put(
+        "/api/prices/manual",
+        headers=auth(token),
+        json={"instrument_key": "AAPL|NASDAQ|CZK", "price": 100.0},
+    )
+    # A snapshot taken today, at today's value, stands in for "start of year".
+    client.post("/api/snapshots", headers=auth(token))
+
+    # The price rises after the snapshot, with no new money added.
+    client.put(
+        "/api/prices/manual",
+        headers=auth(token),
+        json={"instrument_key": "AAPL|NASDAQ|CZK", "price": 120.0},
+    )
+    overview = client.get("/api/overview", headers=auth(token)).json()
+
+    assert overview["ytd_gain_czk"] == pytest.approx(10 * 120.0 - 10 * 100.0)
+    assert overview["ytd_gain_pct"] == pytest.approx(20.0)
+    assert overview["ytd_basis_date"] is not None
+
+
+def test_position_count_and_ytd_sales_appear_on_the_overview(client):
+    token = register(client)
+    portfolio_id = client.get("/api/portfolios", headers=auth(token)).json()[0]["id"]
+    add_transaction(client, token, portfolio_id, currency="CZK", fx_rate=None, price=100.0, quantity=10)
+
+    overview = client.get("/api/overview", headers=auth(token)).json()
+
+    assert overview["position_count"] == 1
+    assert overview["position_count_by_class"] == {"STOCK": 1}
+    assert overview["ytd_sales_tax_exempt"] is None
+    assert len(overview["allocation_by_instrument"]) == 0  # no price yet, so no value

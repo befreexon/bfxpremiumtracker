@@ -308,3 +308,95 @@ def test_a_position_with_a_rateless_transaction_reports_no_gain(capsys=None):
     assert view.total_gain_czk is None
     assert view.price_effect_czk is None
     assert any("kurz" in warning for warning in view.warnings)
+
+
+# --- Position count, YTD sales volume and tax-exempt flag -----------------
+
+
+def test_position_count_splits_by_asset_class():
+    stock = position([buy(date(2020, 1, 10), 10, 100.0, fx=25.0)], price=100.0, fx=25.0)
+    etf = position(
+        [buy(date(2020, 1, 10), 10, 100.0, fx=25.0)],
+        price=100.0, fx=25.0, ticker="VWCE", asset_class="ETF",
+    )
+
+    view = build_portfolio([stock, etf], today=date(2024, 1, 10))
+
+    assert view.position_count == 2
+    assert view.position_count_by_class == {"STOCK": 1, "ETF": 1}
+
+
+def test_a_fully_closed_position_does_not_count_towards_position_count():
+    closed = position(
+        [
+            buy(date(2020, 1, 10), 10, 100.0, fx=23.0),
+            sell(date(2022, 1, 10), 10, 150.0, fx=23.0),
+        ],
+        price=None, fx=23.0,
+    )
+
+    view = build_portfolio([closed], today=date(2024, 1, 10))
+
+    assert view.position_count == 0
+    assert view.position_count_by_class == {}
+
+
+def test_ytd_sales_volume_sums_only_this_years_sales():
+    view_position = position(
+        [
+            buy(date(2019, 1, 10), 20, 100.0, fx=23.0),
+            sell(date(2023, 6, 1), 5, 150.0, fx=24.0),
+            sell(date(2024, 3, 1), 5, 160.0, fx=24.0),
+        ],
+        price=170.0, fx=25.0, today=date(2024, 6, 1),
+    )
+
+    view = build_portfolio([view_position], today=date(2024, 6, 1))
+
+    assert view.ytd_sales_volume_czk == pytest.approx(5 * 160 * 24)
+
+
+def test_ytd_tax_exempt_flag_is_true_only_when_every_sale_had_passed():
+    exempt_sale_only = position(
+        [
+            buy(date(2018, 1, 10), 10, 100.0, fx=23.0),
+            sell(date(2024, 3, 1), 5, 150.0, fx=24.0),
+        ],
+        price=170.0, fx=25.0, today=date(2024, 6, 1),
+    )
+    view = build_portfolio([exempt_sale_only], today=date(2024, 6, 1))
+    assert view.ytd_sales_tax_exempt is True
+
+    not_yet_exempt = position(
+        [
+            buy(date(2023, 1, 10), 10, 100.0, fx=23.0),
+            sell(date(2024, 3, 1), 5, 150.0, fx=24.0),
+        ],
+        price=170.0, fx=25.0, today=date(2024, 6, 1),
+    )
+    view = build_portfolio([not_yet_exempt], today=date(2024, 6, 1))
+    assert view.ytd_sales_tax_exempt is False
+
+
+def test_ytd_tax_exempt_flag_is_none_without_any_sale_this_year():
+    no_sales = position([buy(date(2020, 1, 10), 10, 100.0, fx=23.0)], price=150.0, fx=25.0)
+
+    view = build_portfolio([no_sales], today=date(2024, 6, 1))
+
+    assert view.ytd_sales_tax_exempt is None
+    assert view.ytd_sales_volume_czk == pytest.approx(0.0)
+
+
+# --- Per-instrument allocation ----------------------------------------------
+
+
+def test_allocation_by_instrument_lists_each_position_by_weight():
+    big = position([buy(date(2020, 1, 10), 100, 100.0, fx=25.0)], price=100.0, fx=25.0)
+    small = position(
+        [buy(date(2020, 1, 10), 10, 100.0, fx=25.0)], price=100.0, fx=25.0, ticker="MSFT",
+    )
+
+    view = build_portfolio([big, small], today=date(2024, 1, 10))
+
+    assert [slice_.label for slice_ in view.allocation_by_instrument] == ["AAPL", "MSFT"]
+    assert view.allocation_by_instrument[0].weight == pytest.approx(100 / 110)

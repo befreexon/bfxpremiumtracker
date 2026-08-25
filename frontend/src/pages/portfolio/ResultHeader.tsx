@@ -8,9 +8,9 @@
  */
 
 import type { CSSProperties } from 'react';
-import type { Overview } from '../../api/types';
+import type { AssetClass, Overview } from '../../api/types';
 import { arrowFor, czk, MISSING, percent, toneFor, TONE_COLOR_ON_DARK } from '../../lib/format';
-import { CAPTION, EYEBROW, PANEL } from './theme';
+import { ASSET_CLASS_LABEL, CAPTION, EYEBROW, PANEL } from './theme';
 
 interface ResultHeaderProps {
   data: Overview;
@@ -162,6 +162,66 @@ export function ResultHeader({ data, scopeLabel, narrow }: ResultHeaderProps) {
           </span>
         </div>
       </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: narrow ? 'repeat(2, minmax(0, 1fr))' : 'repeat(auto-fit, minmax(150px, 1fr))',
+          gap: 18,
+          paddingTop: 18,
+          borderTop: '1px solid var(--hairline-dark)',
+        }}
+      >
+        <YtdStat data={data} />
+        <SalesStat data={data} />
+        <PositionCountStat data={data} />
+      </div>
     </section>
   );
+}
+
+function YtdStat({ data }: { data: Overview }) {
+  if (data.ytd_gain_pct === null) {
+    return (
+      <Stat
+        label="Zhodnocení YTD"
+        value={MISSING}
+        hint={data.ytd_unavailable_reason ?? 'Chybí letošní snapshot.'}
+      />
+    );
+  }
+  return (
+    <Stat
+      label="Zhodnocení YTD"
+      value={percent(data.ytd_gain_pct, 2, { withSign: true })}
+      tone={toneFor(data.ytd_gain_pct)}
+      hint={`od ${data.ytd_basis_date ? new Date(data.ytd_basis_date).toLocaleDateString('cs-CZ') : '—'} · ${czk(data.ytd_gain_czk)}`}
+    />
+  );
+}
+
+function SalesStat({ data }: { data: Overview }) {
+  const exempt = data.ytd_sales_tax_exempt;
+  return (
+    <Stat
+      label="Objem prodejů YTD"
+      value={czk(data.ytd_sales_volume_czk)}
+      hint={
+        exempt === null
+          ? 'Letos zatím žádný prodej'
+          : exempt
+            ? 'Daňově osv.: ANO'
+            : 'Daňově osv.: NE — část nesplnila časový test'
+      }
+    />
+  );
+}
+
+function PositionCountStat({ data }: { data: Overview }) {
+  const breakdown = (Object.entries(data.position_count_by_class) as [AssetClass, number][])
+    .sort(([, a], [, b]) => b - a)
+    .map(([cls, count]) => `${count} ${ASSET_CLASS_LABEL[cls] ?? cls}`)
+    .join(' · ');
+
+  return <Stat label="Pozic v portfoliu" value={String(data.position_count)} hint={breakdown || undefined} />;
 }

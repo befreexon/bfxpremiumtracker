@@ -110,8 +110,30 @@ class PortfolioView:
     positions: list[PositionView] = field(default_factory=list)
     allocation_by_class: list[AllocationSlice] = field(default_factory=list)
     allocation_by_currency: list[AllocationSlice] = field(default_factory=list)
+    allocation_by_instrument: list[AllocationSlice] = field(default_factory=list)
     concentration_warnings: list[dict] = field(default_factory=list)
     upcoming_dividends: list[dict] = field(default_factory=list)
+
+    #: Open positions, and the same count split by asset class (e.g. {"STOCK": 16, "ETF": 2}).
+    position_count: int = 0
+    position_count_by_class: dict[str, int] = field(default_factory=dict)
+
+    #: Sum of sale proceeds from SELL transactions dated this calendar year.
+    ytd_sales_volume_czk: float = 0.0
+    #: Whether every sale realised this year had already passed the holding-period
+    #: test. None when there were no sales this year — the question does not apply.
+    ytd_sales_tax_exempt: bool | None = None
+
+    #: Return since the nearest snapshot dated in the current year, computed the
+    #: same way as the portfolio XIRR (see services.portfolio_view), just not
+    #: annualised — a period return, not a rate. None without such a snapshot,
+    #: because there is no other way to know what the portfolio was worth on
+    #: 1 January without reconstructing historical prices, which this app does
+    #: not do.
+    ytd_gain_czk: float | None = None
+    ytd_gain_pct: float | None = None
+    ytd_basis_date: str | None = None
+    ytd_unavailable_reason: str | None = None
 
     positions_missing_price: list[str] = field(default_factory=list)
     positions_missing_fx: list[str] = field(default_factory=list)
@@ -348,6 +370,11 @@ def build_portfolio(
             view.positions_missing_price.append(position.instrument_key)
         if position.missing_fx:
             view.positions_missing_fx.append(position.instrument_key)
+        if position.quantity > 1e-9:
+            view.position_count += 1
+            view.position_count_by_class[position.asset_class] = (
+                view.position_count_by_class.get(position.asset_class, 0) + 1
+            )
 
     proceeds = sum(
         sale["proceeds_czk"] for position in positions for sale in position.sales
@@ -359,6 +386,7 @@ def build_portfolio(
 
     _fill_allocation(view)
     _fill_concentration(view)
+    _fill_ytd_sales(view, today)
 
     if xirr_flows:
         flows = list(xirr_flows)
@@ -397,10 +425,36 @@ def _fill_allocation(view: PortfolioView) -> None:
         AllocationSlice(label=label, value_czk=value, weight=(value / total if total else 0.0))
         for label, value in sorted(by_currency.items(), key=lambda kv: -kv[1])
     ]
+    view.allocation_by_instrument = [
+        AllocationSlice(
+            label=position.ticker,
+            value_czk=position.value_czk,
+            weight=(position.value_czk / total if total else 0.0),
+        )
+        for position in sorted(
+            (p for p in view.positions if p.value_czk), key=lambda p: -p.value_czk
+        )
+    ]
 
     for position in view.positions:
         if position.value_czk and total:
             position.weight = position.value_czk / total
+
+
+def _fill_ytd_sales(view: PortfolioView, today: date) -> None:
+    """This year's realised sales: how much, and whether all of it was already
+    exempt from tax on the day it was sold."""
+    year_prefix = str(today.year)
+    ytd_sales = [
+        sale
+        for position in view.positions
+        for sale in position.sales
+        if sale["date"].startswith(year_prefix)
+    ]
+    if not ytd_sales:
+        return
+    view.ytd_sales_volume_czk = sum(sale["proceeds_czk"] for sale in ytd_sales)
+    view.ytd_sales_tax_exempt = all(sale["tax_test_passed"] for sale in ytd_sales)
 
 
 def _cs(value: float, decimals: int = 1) -> str:

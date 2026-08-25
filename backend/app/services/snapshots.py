@@ -71,6 +71,35 @@ def record_snapshot(
     return row
 
 
+def earliest_value_this_year(
+    db: Session, portfolio_ids: list[int], year: int
+) -> tuple[date, float] | None:
+    """Total value across the given portfolios at the earliest snapshot this year.
+
+    None when no such snapshot exists — the caller has to say so rather than
+    guess at a starting value.
+    """
+    if not portfolio_ids:
+        return None
+
+    rows = (
+        db.query(Snapshot)
+        .filter(
+            Snapshot.portfolio_id.in_(portfolio_ids),
+            Snapshot.date >= date(year, 1, 1),
+            Snapshot.date < date(year + 1, 1, 1),
+        )
+        .order_by(Snapshot.date)
+        .all()
+    )
+    if not rows:
+        return None
+
+    earliest = min(row.date for row in rows)
+    total = sum(row.value_czk for row in rows if row.date == earliest)
+    return earliest, total
+
+
 def history(db: Session, portfolio_ids: list[int]) -> list[dict]:
     """Monthly points, summed across portfolios when several are selected."""
     rows = (

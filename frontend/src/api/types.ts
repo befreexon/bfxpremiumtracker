@@ -148,8 +148,17 @@ export interface Overview {
   positions: Position[];
   allocation_by_class: AllocationSlice[];
   allocation_by_currency: AllocationSlice[];
+  allocation_by_instrument: AllocationSlice[];
   concentration_warnings: ConcentrationWarning[];
   upcoming_dividends: UpcomingDividend[];
+  position_count: number;
+  position_count_by_class: Record<string, number>;
+  ytd_sales_volume_czk: number;
+  ytd_sales_tax_exempt: boolean | null;
+  ytd_gain_czk: number | null;
+  ytd_gain_pct: number | null;
+  ytd_basis_date: string | null;
+  ytd_unavailable_reason: string | null;
   positions_missing_price: string[];
   positions_missing_fx: string[];
   warnings: string[];
