@@ -4,8 +4,35 @@
 @import './tokens/spacing.css';
 @import './tokens/radius.css';
 
+/*
+ * Semantic aliases for a money table, layered on the BFX Premium palette.
+ * Gain and green, loss and red, are never the sole carrier of meaning here —
+ * every figure also shows its sign and an arrow.
+ */
+:root {
+  --gain: var(--accent-success-text);
+  --loss: var(--accent-danger-text);
+  --gain-on-dark: #7fbf8f;
+  --loss-on-dark: #e3897f;
+
+  /* Holding-period countdown, from "just bought" to "exempt". */
+  --tax-far: var(--accent-danger);
+  --tax-approaching: var(--accent-warning);
+  --tax-soon: var(--accent-success);
+  --tax-passed: var(--gold);
+}
+
 * {
   box-sizing: border-box;
+}
+
+/*
+ * Fixed-width digits everywhere a number can end up in a column. Without this
+ * the amounts drift out of alignment row to row and stop being comparable.
+ */
+table,
+.numeric {
+  font-variant-numeric: tabular-nums;
 }
 
 html,
@@ -32,4 +59,118 @@ textarea {
 
 a {
   color: var(--link);
+}
+
+/*
+ * Utility classes the data-dense layers rely on. They exist as CSS rather than
+ * inline styles because they carry :hover and :focus-visible states, which an
+ * inline style object cannot express.
+ */
+
+/* A control that reads as text: sort headers, inline price editing, row actions. */
+.bfx-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: inherit;
+  border-radius: var(--radius-sm);
+}
+
+.bfx-link:hover:not(:disabled) {
+  color: var(--gold);
+}
+
+.bfx-link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.bfx-link-danger:hover:not(:disabled) {
+  color: var(--loss-on-dark);
+}
+
+/* Column header doubling as a sort control. */
+.bfx-sort {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.bfx-sort:hover {
+  color: var(--gold);
+}
+
+/* Small pill used for the sort selector on narrow screens. */
+.bfx-chip {
+  background: var(--surface-elevated);
+  border: 1px solid var(--hairline-dark);
+  color: var(--on-dark);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  padding: 6px 13px;
+  cursor: pointer;
+}
+
+.bfx-chip:hover,
+.bfx-chip[aria-pressed='true'] {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* A table row that behaves as a button. */
+.bfx-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease-out;
+}
+
+.bfx-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Wide content scrolls inside itself rather than pushing the page sideways. */
+.bfx-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bfx-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

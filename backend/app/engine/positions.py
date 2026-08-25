@@ -403,6 +403,11 @@ def _fill_allocation(view: PortfolioView) -> None:
             position.weight = position.value_czk / total
 
 
+def _cs(value: float, decimals: int = 1) -> str:
+    """A number for a Czech sentence — decimal comma, not a point."""
+    return f"{value:.{decimals}f}".replace(".", ",")
+
+
 def _fill_concentration(view: PortfolioView) -> None:
     for position in view.positions:
         if position.weight and position.weight > CONCENTRATION_LIMIT:
@@ -412,7 +417,7 @@ def _fill_concentration(view: PortfolioView) -> None:
                     "ticker": position.ticker,
                     "weight": position.weight,
                     "message": (
-                        f"{position.ticker} tvoří {position.weight * 100:.1f} % portfolia "
+                        f"{position.ticker} tvoří {_cs(position.weight * 100)} % portfolia "
                         f"(hranice {CONCENTRATION_LIMIT * 100:.0f} %)."
                     ),
                 }

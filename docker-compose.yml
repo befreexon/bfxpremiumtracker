@@ -3,8 +3,16 @@ services:
     build: ./backend
     ports:
       - "8000:8000"
+    environment:
+      # Without a fixed secret every restart signs everyone out.
+      - BFX_SECRET_KEY=${BFX_SECRET_KEY:-zmen-me-v-env-souboru}
+      - BFX_DATA_DIR=/data
+      # Optional: enables the written commentary in the AI analysis layer.
+      # Everything else there works without it.
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     volumes:
       - ./backend/app:/app/app
+      - bfx-data:/data
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
@@ -19,3 +27,6 @@ services:
       - ./frontend/index.html:/app/index.html
     depends_on:
       - backend
+
+volumes:
+  bfx-data:
