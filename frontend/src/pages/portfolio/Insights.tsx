@@ -17,15 +17,18 @@ import { snapshots as snapshotApi } from '../../api/client';
 import type { AllocationSlice, BenchmarkComparison, Overview, Snapshot } from '../../api/types';
 import { Button } from '../../design/components';
 import { NUMERIC_STYLE, TONE_COLOR_ON_DARK, arrowFor, czk, date as formatDate, share, toneFor } from '../../lib/format';
+import { Segments } from './Segments';
 import { CAPTION, EYEBROW, PANEL, SECTION_TITLE, errorText } from './theme';
+import { TransactionJournal } from './TransactionJournal';
 
 interface InsightsProps {
   data: Overview;
   scopeIds: number[] | undefined;
   benchmarkTicker: string;
+  onChanged: () => void;
 }
 
-export function Insights({ data, scopeIds, benchmarkTicker }: InsightsProps) {
+export function Insights({ data, scopeIds, benchmarkTicker, onChanged }: InsightsProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <ValueChart scopeIds={scopeIds} />
@@ -35,8 +38,10 @@ export function Insights({ data, scopeIds, benchmarkTicker }: InsightsProps) {
         <Allocation title="Podle třídy aktiv" slices={data.allocation_by_class} />
         <Allocation title="Podle měny" slices={data.allocation_by_currency} />
       </div>
+      <Segments data={data} onChanged={onChanged} />
       <Concentration data={data} />
       <DividendCalendar data={data} />
+      <TransactionJournal scopeIds={scopeIds} />
     </div>
   );
 }

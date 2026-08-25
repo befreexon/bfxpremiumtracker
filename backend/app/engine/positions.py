@@ -94,6 +94,9 @@ class AllocationSlice:
     label: str
     value_czk: float
     weight: float
+    #: Only set for user-defined segments — a fixed colour makes sense there
+    #: because the user picked it; the other breakdowns rotate a palette instead.
+    color: str | None = None
 
 
 @dataclass
@@ -111,6 +114,10 @@ class PortfolioView:
     allocation_by_class: list[AllocationSlice] = field(default_factory=list)
     allocation_by_currency: list[AllocationSlice] = field(default_factory=list)
     allocation_by_instrument: list[AllocationSlice] = field(default_factory=list)
+    #: The user's own custom breakdown ("Vlastní rozdělení") — empty until they
+    #: define at least one segment. Filled in by services.portfolio_view, not
+    #: here, since it depends on data this pure engine has no access to.
+    allocation_by_segment: list[AllocationSlice] = field(default_factory=list)
     concentration_warnings: list[dict] = field(default_factory=list)
     upcoming_dividends: list[dict] = field(default_factory=list)
 

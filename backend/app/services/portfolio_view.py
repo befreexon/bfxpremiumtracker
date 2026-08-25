@@ -7,9 +7,15 @@ from sqlalchemy.orm import Session
 
 from app.engine import fifo
 from app.engine.fifo import TxInput
-from app.engine.positions import PortfolioView, PositionView, build_portfolio, build_position
+from app.engine.positions import (
+    AllocationSlice,
+    PortfolioView,
+    PositionView,
+    build_portfolio,
+    build_position,
+)
 from app.engine.xirr import CashFlow
-from app.models import Portfolio, Transaction, User
+from app.models import Portfolio, Segment, SegmentMember, Transaction, User
 from app.services import fx as fx_service
 from app.services import prices as price_service
 from app.services import snapshots as snapshot_service
@@ -110,7 +116,59 @@ def build_view(
         p.id for p in db.query(Portfolio).filter(Portfolio.user_id == user.id)
     ]
     _fill_ytd_return(db, view, rows, resolved_ids, today)
+    _fill_segment_allocation(db, view, user)
     return view
+
+
+def _fill_segment_allocation(db: Session, view: PortfolioView, user: User) -> None:
+    """The user's own custom breakdown ("Vlastní rozdělení"), alongside the
+    built-in ones by class/currency/instrument. Empty until they define at
+    least one segment; positions with no assignment fall into "Nezařazeno"."""
+    segments = (
+        db.query(Segment)
+        .filter(Segment.user_id == user.id)
+        .order_by(Segment.sort_order, Segment.id)
+        .all()
+    )
+    if not segments:
+        return
+
+    members = db.query(SegmentMember).filter(SegmentMember.user_id == user.id).all()
+    segment_of = {member.instrument_key: member.segment_id for member in members}
+
+    totals: dict[int, float] = {}
+    unassigned = 0.0
+    for position in view.positions:
+        if not position.value_czk:
+            continue
+        segment_id = segment_of.get(position.instrument_key)
+        if segment_id is not None:
+            totals[segment_id] = totals.get(segment_id, 0.0) + position.value_czk
+        else:
+            unassigned += position.value_czk
+
+    total = view.value_czk or 0.0
+    slices = [
+        AllocationSlice(
+            label=segment.name,
+            value_czk=totals[segment.id],
+            weight=(totals[segment.id] / total if total else 0.0),
+            color=segment.color,
+        )
+        for segment in segments
+        if totals.get(segment.id)
+    ]
+    if unassigned:
+        slices.append(
+            AllocationSlice(
+                label="Nezařazeno",
+                value_czk=unassigned,
+                weight=(unassigned / total if total else 0.0),
+                color=None,
+            )
+        )
+    slices.sort(key=lambda item: -item.value_czk)
+    view.allocation_by_segment = slices
 
 
 def _fill_ytd_return(

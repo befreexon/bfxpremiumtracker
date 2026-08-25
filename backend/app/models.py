@@ -185,6 +185,39 @@ class FxRate(Base):
     fetched_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now)
 
 
+class Segment(Base):
+    """A user-defined slice of the portfolio ("Vlastní rozdělení") — e.g. "Core"
+    vs "Speculative" — alongside the built-in class/currency/instrument views."""
+
+    __tablename__ = "segments"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(80))
+    color: Mapped[str] = mapped_column(String(16), default="#dcb45c")
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now)
+
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_segment_user_name"),)
+
+
+class SegmentMember(Base):
+    """Which segment an instrument belongs to. An instrument sits in at most one
+    segment — this is a partition of the portfolio, not free-form tagging — so
+    assigning a new segment simply replaces the existing row."""
+
+    __tablename__ = "segment_members"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    segment_id: Mapped[int] = mapped_column(ForeignKey("segments.id", ondelete="CASCADE"), index=True)
+    instrument_key: Mapped[str] = mapped_column(String(64))
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "instrument_key", name="uq_segment_member_user_instrument"),
+    )
+
+
 class Snapshot(Base):
     """Monthly point for the value chart. The chart is never reconstructed
     backwards — that would need historical prices and FX for every day."""

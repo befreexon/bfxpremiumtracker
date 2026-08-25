@@ -131,6 +131,33 @@ class TransactionResponse(TransactionBase):
 
 
 # --------------------------------------------------------------------------
+# Segments ("Vlastní rozdělení" — the user's own custom breakdown)
+# --------------------------------------------------------------------------
+
+
+class SegmentCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=80)
+    color: str = Field("#dcb45c", max_length=16)
+
+
+class SegmentUpdate(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=80)
+    color: str | None = Field(None, max_length=16)
+
+
+class SegmentResponse(BaseModel):
+    id: int
+    name: str
+    color: str
+    member_instrument_keys: list[str] = []
+
+
+class SegmentAssign(BaseModel):
+    instrument_key: str = Field(..., min_length=1, max_length=64)
+    segment_id: int | None = None  # None unassigns the instrument
+
+
+# --------------------------------------------------------------------------
 # Watchlist
 # --------------------------------------------------------------------------
 

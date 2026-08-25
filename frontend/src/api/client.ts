@@ -20,6 +20,7 @@ import type {
   MonteCarloResult,
   OptimizeResult,
   QuantBenchmarkResult,
+  Segment,
   Snapshot,
   TickerAnalysis,
   Transaction,
@@ -194,6 +195,33 @@ export const portfolios = {
 
   removeTransaction: (id: number, txId: number) =>
     request<void>(`/api/portfolios/${id}/transactions/${txId}`, { method: 'DELETE' }),
+};
+
+// --- Transaction journal (spans portfolios, unlike portfolios.transactions) --
+
+export const journal = {
+  list: (portfolioIds?: number[], limit = 200) =>
+    request<Transaction[]>(`/api/transactions${query({ portfolio_ids: portfolioIds, limit })}`),
+};
+
+// --- Segments ("Vlastní rozdělení") -----------------------------------------
+
+export const segments = {
+  list: () => request<Segment[]>('/api/segments'),
+
+  create: (name: string, color: string) =>
+    request<Segment>('/api/segments', json('POST', { name, color })),
+
+  update: (id: number, patch: { name?: string; color?: string }) =>
+    request<Segment>(`/api/segments/${id}`, json('PATCH', patch)),
+
+  remove: (id: number) => request<void>(`/api/segments/${id}`, { method: 'DELETE' }),
+
+  assign: (instrumentKey: string, segmentId: number | null) =>
+    request<{ instrument_key: string; segment_id: number | null }>(
+      '/api/segments/assign',
+      json('PUT', { instrument_key: instrumentKey, segment_id: segmentId }),
+    ),
 };
 
 // --- Overview --------------------------------------------------------------

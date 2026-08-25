@@ -594,3 +594,152 @@ def test_position_count_and_ytd_sales_appear_on_the_overview(client):
     assert overview["position_count_by_class"] == {"STOCK": 1}
     assert overview["ytd_sales_tax_exempt"] is None
     assert len(overview["allocation_by_instrument"]) == 0  # no price yet, so no value
+
+
+# --- Segments ("Vlastní rozdělení") -----------------------------------------
+
+
+def test_a_segment_can_be_created_renamed_and_deleted(client):
+    token = register(client)
+
+    created = client.post(
+        "/api/segments", headers=auth(token), json={"name": "Jádro", "color": "#dcb45c"}
+    )
+    assert created.status_code == 201
+    segment_id = created.json()["id"]
+    assert created.json()["member_instrument_keys"] == []
+
+    renamed = client.patch(
+        f"/api/segments/{segment_id}", headers=auth(token), json={"name": "Jádro portfolia"}
+    )
+    assert renamed.json()["name"] == "Jádro portfolia"
+
+    deleted = client.delete(f"/api/segments/{segment_id}", headers=auth(token))
+    assert deleted.status_code == 204
+    assert client.get("/api/segments", headers=auth(token)).json() == []
+
+
+def test_two_segments_cannot_share_a_name(client):
+    token = register(client)
+    client.post("/api/segments", headers=auth(token), json={"name": "Jádro"})
+
+    duplicate = client.post("/api/segments", headers=auth(token), json={"name": "Jádro"})
+
+    assert duplicate.status_code == 409
+
+
+def test_an_instrument_can_be_assigned_to_a_segment_and_then_unassigned(client):
+    token = register(client)
+    segment_id = client.post(
+        "/api/segments", headers=auth(token), json={"name": "Spekulace"}
+    ).json()["id"]
+
+    assigned = client.put(
+        "/api/segments/assign",
+        headers=auth(token),
+        json={"instrument_key": "AAPL|NASDAQ|USD", "segment_id": segment_id},
+    )
+    assert assigned.json() == {"instrument_key": "AAPL|NASDAQ|USD", "segment_id": segment_id}
+    assert client.get("/api/segments", headers=auth(token)).json()[0]["member_instrument_keys"] == [
+        "AAPL|NASDAQ|USD"
+    ]
+
+    unassigned = client.put(
+        "/api/segments/assign",
+        headers=auth(token),
+        json={"instrument_key": "AAPL|NASDAQ|USD", "segment_id": None},
+    )
+    assert unassigned.json()["segment_id"] is None
+    assert client.get("/api/segments", headers=auth(token)).json()[0]["member_instrument_keys"] == []
+
+
+def test_segment_allocation_splits_value_and_puts_the_rest_in_unassigned(client):
+    token = register(client)
+    portfolio_id = client.get("/api/portfolios", headers=auth(token)).json()[0]["id"]
+    add_transaction(client, token, portfolio_id, ticker="AAPL", currency="CZK", fx_rate=None, price=100.0, quantity=10)
+    add_transaction(client, token, portfolio_id, ticker="MSFT", currency="CZK", fx_rate=None, price=50.0, quantity=10)
+    client.put(
+        "/api/prices/manual",
+        headers=auth(token),
+        json={"instrument_key": "AAPL|NASDAQ|CZK", "price": 100.0},
+    )
+    client.put(
+        "/api/prices/manual",
+        headers=auth(token),
+        json={"instrument_key": "MSFT|NASDAQ|CZK", "price": 50.0},
+    )
+
+    segment_id = client.post(
+        "/api/segments", headers=auth(token), json={"name": "Jádro", "color": "#123456"}
+    ).json()["id"]
+    client.put(
+        "/api/segments/assign",
+        headers=auth(token),
+        json={"instrument_key": "AAPL|NASDAQ|CZK", "segment_id": segment_id},
+    )
+
+    overview = client.get("/api/overview", headers=auth(token)).json()
+    by_label = {s["label"]: s for s in overview["allocation_by_segment"]}
+
+    assert by_label["Jádro"]["value_czk"] == pytest.approx(1000.0)
+    assert by_label["Jádro"]["color"] == "#123456"
+    assert by_label["Nezařazeno"]["value_czk"] == pytest.approx(500.0)
+
+
+def test_a_segment_cannot_be_seen_or_assigned_by_another_account(client):
+    mine = register(client, email="mine@example.com")
+    theirs = register(client, email="theirs@example.com")
+    segment_id = client.post("/api/segments", headers=auth(mine), json={"name": "Jádro"}).json()["id"]
+
+    response = client.put(
+        "/api/segments/assign",
+        headers=auth(theirs),
+        json={"instrument_key": "AAPL|NASDAQ|USD", "segment_id": segment_id},
+    )
+
+    assert response.status_code == 404
+
+
+# --- Transaction journal -----------------------------------------------------
+
+
+def test_the_transaction_journal_spans_portfolios_newest_first(client):
+    token = register(client)
+    portfolio_id = client.get("/api/portfolios", headers=auth(token)).json()[0]["id"]
+    second_id = client.post(
+        "/api/portfolios", headers=auth(token), json={"name": "Druhé"}
+    ).json()["id"]
+    add_transaction(client, token, portfolio_id, ticker="AAPL", date="2021-01-10")
+    add_transaction(client, token, second_id, ticker="MSFT", date="2022-06-01")
+
+    journal = client.get("/api/transactions", headers=auth(token)).json()
+
+    assert [row["ticker"] for row in journal] == ["MSFT", "AAPL"]
+    assert journal[0]["portfolio_name"] == "Druhé"
+
+
+def test_the_transaction_journal_can_be_narrowed_to_one_portfolio(client):
+    token = register(client)
+    portfolio_id = client.get("/api/portfolios", headers=auth(token)).json()[0]["id"]
+    second_id = client.post(
+        "/api/portfolios", headers=auth(token), json={"name": "Druhé"}
+    ).json()["id"]
+    add_transaction(client, token, portfolio_id, ticker="AAPL")
+    add_transaction(client, token, second_id, ticker="MSFT")
+
+    journal = client.get(
+        f"/api/transactions?portfolio_ids={portfolio_id}", headers=auth(token)
+    ).json()
+
+    assert [row["ticker"] for row in journal] == ["AAPL"]
+
+
+def test_one_account_cannot_see_anothers_transaction_journal(client):
+    mine = register(client, email="mine2@example.com")
+    theirs = register(client, email="theirs2@example.com")
+    portfolio_id = client.get("/api/portfolios", headers=auth(mine)).json()[0]["id"]
+    add_transaction(client, mine, portfolio_id, ticker="AAPL")
+
+    journal = client.get("/api/transactions", headers=auth(theirs)).json()
+
+    assert journal == []

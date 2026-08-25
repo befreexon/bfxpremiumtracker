@@ -17,7 +17,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import CORS_ORIGINS
 from app.db import init_db
-from app.routers import auth, imports, overview, portfolios, prices, quant, snapshots, watchlist
+from app.routers import (
+    auth,
+    imports,
+    overview,
+    portfolios,
+    prices,
+    quant,
+    segments,
+    snapshots,
+    transactions,
+    watchlist,
+)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -51,6 +62,8 @@ app.include_router(imports.router)
 app.include_router(watchlist.router)
 app.include_router(snapshots.router)
 app.include_router(quant.router)
+app.include_router(segments.router)
+app.include_router(transactions.router)
 
 try:
     from app.routers import ai

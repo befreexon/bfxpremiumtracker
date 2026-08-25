@@ -209,7 +209,12 @@ export function PortfolioLayer() {
       )}
 
       {tab === 1 && data && (
-        <Insights data={data} scopeIds={selectedIds} benchmarkTicker={user?.benchmark_ticker ?? 'VWCE'} />
+        <Insights
+          data={data}
+          scopeIds={selectedIds}
+          benchmarkTicker={user?.benchmark_ticker ?? 'VWCE'}
+          onChanged={load}
+        />
       )}
 
       {tab === 2 && (

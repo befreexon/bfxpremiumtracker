@@ -117,6 +117,14 @@ export interface AllocationSlice {
   label: string;
   value_czk: number;
   weight: number;
+  color: string | null;
+}
+
+export interface Segment {
+  id: number;
+  name: string;
+  color: string;
+  member_instrument_keys: string[];
 }
 
 export interface ConcentrationWarning {
@@ -149,6 +157,7 @@ export interface Overview {
   allocation_by_class: AllocationSlice[];
   allocation_by_currency: AllocationSlice[];
   allocation_by_instrument: AllocationSlice[];
+  allocation_by_segment: AllocationSlice[];
   concentration_warnings: ConcentrationWarning[];
   upcoming_dividends: UpcomingDividend[];
   position_count: number;
