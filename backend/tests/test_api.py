@@ -826,3 +826,54 @@ def test_upcoming_dividends_projects_several_payments_within_a_year(client):
     assert all(row["days_away"] <= 365 for row in entries)
     gaps = [entries[i + 1]["days_away"] - entries[i]["days_away"] for i in range(len(entries) - 1)]
     assert all(gap == gaps[0] for gap in gaps)
+
+
+# --- Notes (per-ticker, AI analýza) -----------------------------------------
+
+
+def test_a_note_can_be_added_and_listed_for_its_symbol(client):
+    token = register(client)
+
+    created = client.post(
+        "/api/notes", headers=auth(token), json={"symbol": "nvda", "text": "Sledovat po výsledcích."}
+    )
+    assert created.status_code == 201
+    assert created.json()["symbol"] == "NVDA"
+
+    notes = client.get("/api/notes", headers=auth(token), params={"symbol": "NVDA"}).json()
+    assert len(notes) == 1
+    assert notes[0]["text"] == "Sledovat po výsledcích."
+
+
+def test_notes_are_scoped_to_their_symbol(client):
+    token = register(client)
+    client.post("/api/notes", headers=auth(token), json={"symbol": "NVDA", "text": "A"})
+    client.post("/api/notes", headers=auth(token), json={"symbol": "AAPL", "text": "B"})
+
+    nvda_notes = client.get("/api/notes", headers=auth(token), params={"symbol": "NVDA"}).json()
+
+    assert [n["text"] for n in nvda_notes] == ["A"]
+
+
+def test_a_note_can_be_deleted(client):
+    token = register(client)
+    note_id = client.post(
+        "/api/notes", headers=auth(token), json={"symbol": "NVDA", "text": "Docasna poznamka"}
+    ).json()["id"]
+
+    deleted = client.delete(f"/api/notes/{note_id}", headers=auth(token))
+
+    assert deleted.status_code == 204
+    assert client.get("/api/notes", headers=auth(token), params={"symbol": "NVDA"}).json() == []
+
+
+def test_one_account_cannot_delete_anothers_note(client):
+    mine = register(client, email="notes-mine@example.com")
+    theirs = register(client, email="notes-theirs@example.com")
+    note_id = client.post(
+        "/api/notes", headers=auth(mine), json={"symbol": "NVDA", "text": "Moje"}
+    ).json()["id"]
+
+    response = client.delete(f"/api/notes/{note_id}", headers=auth(theirs))
+
+    assert response.status_code == 404

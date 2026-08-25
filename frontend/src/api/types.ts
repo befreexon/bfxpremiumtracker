@@ -177,6 +177,21 @@ export interface Overview {
   warnings: string[];
 }
 
+export interface Note {
+  id: number;
+  symbol: string;
+  text: string;
+  created_at: string;
+}
+
+export interface MarketQuote {
+  key: string;
+  label: string;
+  price: number | null;
+  change_pct: number | null;
+  currency: string | null;
+}
+
 export interface WatchlistItem {
   id: number;
   ticker: string;

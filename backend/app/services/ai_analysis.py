@@ -168,14 +168,21 @@ class Fundamentals:
     forward_pe: float | None = None
     peg: float | None = None
     price_to_book: float | None = None
+    price_to_sales: float | None = None
     ev_to_ebitda: float | None = None
+    ev_to_fcf: float | None = None
     profit_margin: float | None = None
     roe: float | None = None
+    roa: float | None = None
     revenue_growth: float | None = None
     earnings_growth: float | None = None
     debt_to_equity: float | None = None
     current_ratio: float | None = None
     free_cash_flow: float | None = None
+    #: Free cash flow over market cap — a percentage, unlike free_cash_flow itself.
+    fcf_yield: float | None = None
+    #: 1 / trailing P/E as a percentage — the inverse framing of the same number.
+    earnings_yield: float | None = None
     dividend_yield: float | None = None
     payout_ratio: float | None = None
     beta: float | None = None
@@ -187,14 +194,19 @@ class Fundamentals:
             "forward_pe": "P/E (forward)",
             "peg": "PEG",
             "price_to_book": "P/B",
+            "price_to_sales": "P/S",
             "ev_to_ebitda": "EV/EBITDA",
+            "ev_to_fcf": "EV/FCF",
             "profit_margin": "čistá marže",
             "roe": "ROE",
+            "roa": "ROA",
             "revenue_growth": "růst tržeb",
             "earnings_growth": "růst zisku",
             "debt_to_equity": "poměr dluhu k vlastnímu kapitálu",
             "current_ratio": "běžná likvidita",
             "free_cash_flow": "volný cash flow",
+            "fcf_yield": "FCF výnos",
+            "earnings_yield": "earnings yield",
             "dividend_yield": "dividendový výnos",
             "payout_ratio": "výplatní poměr",
             "beta": "beta",
@@ -1251,23 +1263,46 @@ def build_quote(ticker: str, info: dict, technicals: Technicals) -> Quote:
 
 
 def build_fundamentals(info: dict) -> Fundamentals:
-    """Straight read of the info dict, with every value passed through _clean."""
+    """Straight read of the info dict, plus a handful of ratios yfinance does
+    not already compute, derived from those same fields."""
     info = info or {}
+    trailing_pe = _clean(info.get("trailingPE"))
+    market_cap = _clean(info.get("marketCap"))
+    free_cash_flow = _clean(info.get("freeCashflow"))
+    enterprise_value = _clean(info.get("enterpriseValue"))
+
+    ev_to_fcf = (
+        enterprise_value / free_cash_flow
+        if enterprise_value is not None and free_cash_flow and free_cash_flow > 0
+        else None
+    )
+    fcf_yield = (
+        free_cash_flow / market_cap * 100.0
+        if free_cash_flow is not None and market_cap
+        else None
+    )
+    earnings_yield = 100.0 / trailing_pe if trailing_pe and trailing_pe > 0 else None
+
     return Fundamentals(
-        market_cap=_clean(info.get("marketCap")),
-        trailing_pe=_clean(info.get("trailingPE")),
+        market_cap=market_cap,
+        trailing_pe=trailing_pe,
         forward_pe=_clean(info.get("forwardPE")),
         peg=_clean(info.get("trailingPegRatio")) or _clean(info.get("pegRatio")),
         price_to_book=_clean(info.get("priceToBook")),
+        price_to_sales=_clean(info.get("priceToSalesTrailing12Months")),
         ev_to_ebitda=_clean(info.get("enterpriseToEbitda")),
+        ev_to_fcf=ev_to_fcf,
         profit_margin=_clean(info.get("profitMargins")),
         roe=_clean(info.get("returnOnEquity")),
+        roa=_clean(info.get("returnOnAssets")),
         revenue_growth=_clean(info.get("revenueGrowth")),
         earnings_growth=_clean(info.get("earningsGrowth"))
         or _clean(info.get("earningsQuarterlyGrowth")),
         debt_to_equity=_clean(info.get("debtToEquity")),
         current_ratio=_clean(info.get("currentRatio")),
-        free_cash_flow=_clean(info.get("freeCashflow")),
+        free_cash_flow=free_cash_flow,
+        fcf_yield=fcf_yield,
+        earnings_yield=earnings_yield,
         dividend_yield=_clean(info.get("dividendYield")),
         payout_ratio=_clean(info.get("payoutRatio")),
         beta=_clean(info.get("beta")),

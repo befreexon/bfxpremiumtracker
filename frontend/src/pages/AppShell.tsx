@@ -10,6 +10,7 @@ const LAYERS = [
   { to: '/watchlist', label: 'Watchlist' },
   { to: '/analyza', label: 'Analýza' },
   { to: '/ai', label: 'AI analýza' },
+  { to: '/trhy', label: 'Trhy' },
 ];
 
 export function AppShell() {

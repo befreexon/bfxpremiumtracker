@@ -36,16 +36,23 @@ export interface AiFundamentals {
   forward_pe: number | null;
   peg: number | null;
   price_to_book: number | null;
+  price_to_sales: number | null;
   ev_to_ebitda: number | null;
+  ev_to_fcf: number | null;
   /** Fraction, not percent: 0.24 means 24 %. */
   profit_margin: number | null;
   roe: number | null;
+  roa: number | null;
   revenue_growth: number | null;
   earnings_growth: number | null;
   /** yfinance reports this already as a percentage: 150 means 1,5× equity. */
   debt_to_equity: number | null;
   current_ratio: number | null;
   free_cash_flow: number | null;
+  /** Already a percentage, unlike free_cash_flow itself. */
+  fcf_yield: number | null;
+  /** Already a percentage — the inverse framing of trailing_pe. */
+  earnings_yield: number | null;
   /** Either a fraction or a percentage — normalised on display, as the backend does. */
   dividend_yield: number | null;
   payout_ratio: number | null;

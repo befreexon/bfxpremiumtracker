@@ -59,10 +59,34 @@ const ROWS: FundamentalRow[] = [
     format: (value) => multipleText(value),
   },
   {
+    key: 'price_to_sales',
+    label: 'P/S',
+    hint: 'Cena proti tržbám. Užitečné u firem, které ještě nejsou ziskové.',
+    format: (value) => multipleText(value, 1),
+  },
+  {
     key: 'ev_to_ebitda',
     label: 'EV/EBITDA',
     hint: 'Zahrnuje dluh, srovnává napříč různě zadluženými firmami.',
     format: (value) => multipleText(value, 1),
+  },
+  {
+    key: 'ev_to_fcf',
+    label: 'EV/FCF',
+    hint: 'Hodnota firmy proti hotovosti, která jí skutečně zbude.',
+    format: (value) => multipleText(value, 1),
+  },
+  {
+    key: 'earnings_yield',
+    label: 'Earnings yield',
+    hint: 'Převrácená hodnota P/E — kolik procent ceny je roční zisk.',
+    format: (value) => percent(value, 2),
+  },
+  {
+    key: 'fcf_yield',
+    label: 'FCF výnos',
+    hint: 'Volný cash flow proti tržní kapitalizaci.',
+    format: (value) => percent(value, 2),
   },
   {
     key: 'profit_margin',
@@ -74,6 +98,12 @@ const ROWS: FundamentalRow[] = [
     key: 'roe',
     label: 'ROE',
     hint: 'Návratnost vlastního kapitálu. Čti spolu se zadlužením.',
+    format: (value) => fractionAsPercentText(value),
+  },
+  {
+    key: 'roa',
+    label: 'ROA',
+    hint: 'Návratnost celkových aktiv, bez ohledu na to, jak jsou financovaná.',
     format: (value) => fractionAsPercentText(value),
   },
   {

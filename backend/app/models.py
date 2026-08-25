@@ -218,6 +218,21 @@ class SegmentMember(Base):
     )
 
 
+class TickerNote(Base):
+    """A free-text note the user jotted about one instrument in the AI analýza
+    layer — their own thinking, not part of the analysis itself. Keyed by the
+    resolved Yahoo symbol, which already encodes exchange, so "NVDA" and a
+    Prague-listed ticker with the same root never collide."""
+
+    __tablename__ = "ticker_notes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    text: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now)
+
+
 class Snapshot(Base):
     """Monthly point for the value chart. The chart is never reconstructed
     backwards — that would need historical prices and FX for every day."""

@@ -5,6 +5,7 @@ import { dateTime } from '../../lib/format';
 import { AnalysisHeader } from './AnalysisHeader';
 import { ConsensusPanel } from './ConsensusPanel';
 import { FundamentalsTable } from './FundamentalsTable';
+import { Notes } from './Notes';
 import { PriceChart } from './PriceChart';
 import { ProjectionPanel } from './ProjectionPanel';
 import { ScoreBreakdown } from './ScoreBreakdown';
@@ -109,6 +110,7 @@ function AnalysisBody({ analysis }: { analysis: AiAnalysis }) {
       <ScoreBreakdown assessment={analysis.assessment} currency={currency} />
       <PriceChart technicals={analysis.technicals} currency={currency} />
       <FundamentalsTable fundamentals={analysis.fundamentals} currency={currency} />
+      <Notes symbol={analysis.resolved_symbol} />
       <ProjectionPanel projection={analysis.projection} currency={currency} />
       <ConsensusPanel consensus={analysis.consensus} price={analysis.quote.price} currency={currency} />
       <NarrativePanel analysis={analysis} />

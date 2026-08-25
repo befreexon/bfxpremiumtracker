@@ -13,6 +13,8 @@ import type {
   HoldingsInput,
   ImportPreview,
   ImportResult,
+  MarketQuote,
+  Note,
   Overview,
   Portfolio,
   Position,
@@ -397,4 +399,18 @@ export const ai = {
     lookback_days?: number;
     include_narrative?: boolean;
   }) => request<TickerAnalysis>('/api/ai/analyze', json('POST', payload)),
+};
+
+// --- Notes (per-ticker, AI analýza) -----------------------------------------
+
+export const notes = {
+  list: (symbol: string) => request<Note[]>(`/api/notes${query({ symbol })}`),
+  create: (symbol: string, text: string) => request<Note>('/api/notes', json('POST', { symbol, text })),
+  remove: (id: number) => request<void>(`/api/notes/${id}`, { method: 'DELETE' }),
+};
+
+// --- Markets overview --------------------------------------------------------
+
+export const markets = {
+  overview: () => request<MarketQuote[]>('/api/markets/overview'),
 };

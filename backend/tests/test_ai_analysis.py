@@ -633,6 +633,29 @@ def test_a_not_a_number_from_the_feed_is_treated_as_unknown():
     assert fundamentals.peg is None
 
 
+def test_derived_ratios_are_computed_from_the_fields_yfinance_already_gives():
+    fundamentals = build_fundamentals(
+        {
+            "trailingPE": 25.0,
+            "marketCap": 1_000.0,
+            "freeCashflow": 40.0,
+            "enterpriseValue": 1_200.0,
+        }
+    )
+
+    assert fundamentals.earnings_yield == pytest.approx(4.0)  # 100 / 25
+    assert fundamentals.fcf_yield == pytest.approx(4.0)  # 40 / 1000 * 100
+    assert fundamentals.ev_to_fcf == pytest.approx(30.0)  # 1200 / 40
+
+
+def test_derived_ratios_stay_none_without_their_inputs():
+    fundamentals = build_fundamentals({"marketCap": 1_000.0})
+
+    assert fundamentals.earnings_yield is None
+    assert fundamentals.fcf_yield is None
+    assert fundamentals.ev_to_fcf is None
+
+
 def test_the_implied_upside_is_measured_against_the_current_price():
     consensus = build_consensus(
         {"recommendationKey": "buy", "numberOfAnalystOpinions": 30}, {"mean": 120.0}, 100.0

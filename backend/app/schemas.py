@@ -158,6 +158,23 @@ class SegmentAssign(BaseModel):
 
 
 # --------------------------------------------------------------------------
+# Notes (per-ticker, AI analýza)
+# --------------------------------------------------------------------------
+
+
+class NoteCreate(BaseModel):
+    symbol: str = Field(..., min_length=1, max_length=32)
+    text: str = Field(..., min_length=1, max_length=4000)
+
+
+class NoteResponse(BaseModel):
+    id: int
+    symbol: str
+    text: str
+    created_at: dt.datetime
+
+
+# --------------------------------------------------------------------------
 # Watchlist
 # --------------------------------------------------------------------------
 

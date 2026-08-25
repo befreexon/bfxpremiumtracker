@@ -20,6 +20,8 @@ from app.db import init_db
 from app.routers import (
     auth,
     imports,
+    markets,
+    notes,
     overview,
     portfolios,
     prices,
@@ -64,6 +66,8 @@ app.include_router(snapshots.router)
 app.include_router(quant.router)
 app.include_router(segments.router)
 app.include_router(transactions.router)
+app.include_router(notes.router)
+app.include_router(markets.router)
 
 try:
     from app.routers import ai
