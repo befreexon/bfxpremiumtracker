@@ -46,6 +46,20 @@ npm run dev
 Backend potřebuje přístup na internet — ceny tahá z Yahoo Finance, kurzy z ČNB.
 Bez internetu aplikace funguje dál, jen se ceny a kurzy zadávají ručně.
 
+### GitHub Codespaces
+
+Repo obsahuje `.devcontainer/`, takže Codespace se nastaví sám:
+
+1. Na GitHubu na tomhle repu **Code → Codespaces → Create codespace on main**.
+2. Počkej, až doběhne `postCreateCommand` (nainstaluje backend i frontend a
+   založí `.env` s náhodným `BFX_SECRET_KEY`).
+3. Ve dvou terminálech spusť stejné příkazy jako výše v sekci *Bez Dockeru*.
+4. Jakmile naběhne port **5173**, Codespace ho sám přesměruje a otevře náhled
+   v prohlížeči — na tu adresu se pak vracíš i příště.
+
+Port 8000 (API) se nepřeposílá ven, frontend na něj volá přes Vite proxy
+uvnitř Codespace, takže není potřeba ho zveřejňovat.
+
 ### Nastavení prostředí
 
 | Proměnná | Povinná | Význam |

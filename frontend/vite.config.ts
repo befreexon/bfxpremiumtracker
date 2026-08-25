@@ -9,6 +9,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true,
+    // Codespaces (and Gitpod) serve the forwarded dev server from a generated
+    // subdomain; Vite's Host-header check would otherwise reject it as an
+    // unrecognised host.
+    allowedHosts: ['.app.github.dev', '.githubpreview.dev', '.gitpod.io'],
     proxy: {
       '/api': backendUrl,
     },
