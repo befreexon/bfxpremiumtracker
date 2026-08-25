@@ -7,7 +7,7 @@
  * where none of them is read.
  */
 
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { AssetClass, Overview } from '../../api/types';
 import { arrowFor, czk, MISSING, percent, toneFor, TONE_COLOR_ON_DARK } from '../../lib/format';
 import { ASSET_CLASS_LABEL, CAPTION, EYEBROW, PANEL } from './theme';
@@ -16,6 +16,8 @@ interface ResultHeaderProps {
   data: Overview;
   scopeLabel: string;
   narrow: boolean;
+  onTakeSnapshot?: () => void;
+  takingSnapshot?: boolean;
 }
 
 const NUM: CSSProperties = { fontVariantNumeric: 'tabular-nums' };
@@ -25,11 +27,13 @@ function Stat({
   value,
   tone,
   hint,
+  action,
 }: {
   label: string;
   value: string;
   tone?: 'gain' | 'loss' | 'flat';
   hint?: string;
+  action?: ReactNode;
 }) {
   return (
     <div style={{ minWidth: 132 }}>
@@ -46,11 +50,12 @@ function Stat({
         {value}
       </div>
       {hint && <div style={{ ...CAPTION, fontSize: 12, marginTop: 2 }}>{hint}</div>}
+      {action && <div style={{ marginTop: 6 }}>{action}</div>}
     </div>
   );
 }
 
-export function ResultHeader({ data, scopeLabel, narrow }: ResultHeaderProps) {
+export function ResultHeader({ data, scopeLabel, narrow, onTakeSnapshot, takingSnapshot }: ResultHeaderProps) {
   const tone = toneFor(data.total_gain_czk);
   const arrow = arrowFor(data.total_gain_czk);
   const sign = data.total_gain_czk > 0 ? '+' : '';
@@ -172,7 +177,7 @@ export function ResultHeader({ data, scopeLabel, narrow }: ResultHeaderProps) {
           borderTop: '1px solid var(--hairline-dark)',
         }}
       >
-        <YtdStat data={data} />
+        <YtdStat data={data} onTakeSnapshot={onTakeSnapshot} takingSnapshot={takingSnapshot} />
         <SalesStat data={data} />
         <PositionCountStat data={data} />
       </div>
@@ -180,13 +185,37 @@ export function ResultHeader({ data, scopeLabel, narrow }: ResultHeaderProps) {
   );
 }
 
-function YtdStat({ data }: { data: Overview }) {
+function SnapshotButton({ onTakeSnapshot, takingSnapshot }: { onTakeSnapshot?: () => void; takingSnapshot?: boolean }) {
+  if (!onTakeSnapshot) return null;
+  return (
+    <button
+      type="button"
+      className="bfx-link"
+      onClick={onTakeSnapshot}
+      disabled={takingSnapshot}
+      style={{ fontSize: 12, padding: 0, background: 'none', border: 'none', cursor: takingSnapshot ? 'default' : 'pointer' }}
+    >
+      {takingSnapshot ? 'Natahuji…' : 'Natáhnout dnešní data ↻'}
+    </button>
+  );
+}
+
+function YtdStat({
+  data,
+  onTakeSnapshot,
+  takingSnapshot,
+}: {
+  data: Overview;
+  onTakeSnapshot?: () => void;
+  takingSnapshot?: boolean;
+}) {
   if (data.ytd_gain_pct === null) {
     return (
       <Stat
         label="Zhodnocení YTD"
         value={MISSING}
         hint={data.ytd_unavailable_reason ?? 'Chybí letošní snapshot.'}
+        action={<SnapshotButton onTakeSnapshot={onTakeSnapshot} takingSnapshot={takingSnapshot} />}
       />
     );
   }
@@ -196,6 +225,7 @@ function YtdStat({ data }: { data: Overview }) {
       value={percent(data.ytd_gain_pct, 2, { withSign: true })}
       tone={toneFor(data.ytd_gain_pct)}
       hint={`od ${data.ytd_basis_date ? new Date(data.ytd_basis_date).toLocaleDateString('cs-CZ') : '—'} · ${czk(data.ytd_gain_czk)}`}
+      action={<SnapshotButton onTakeSnapshot={onTakeSnapshot} takingSnapshot={takingSnapshot} />}
     />
   );
 }

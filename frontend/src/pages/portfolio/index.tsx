@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { overview as overviewApi, prices as priceApi } from '../../api/client';
+import { overview as overviewApi, prices as priceApi, snapshots as snapshotApi } from '../../api/client';
 import type { Overview, Transaction } from '../../api/types';
 import { Button, Tabs } from '../../design/components';
 import { dateTime } from '../../lib/format';
@@ -34,6 +34,7 @@ export function PortfolioLayer() {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshedAt, setRefreshedAt] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [takingSnapshot, setTakingSnapshot] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -94,6 +95,20 @@ export function PortfolioLayer() {
     }
   };
 
+  const takeSnapshot = async () => {
+    setTakingSnapshot(true);
+    setError(null);
+    try {
+      await snapshotApi.take(selectedIds);
+      await load();
+      setNotice('Dnešní data uložena — YTD zhodnocení je aktuální.');
+    } catch (err) {
+      setError(errorText(err, 'Snapshot se nepodařilo uložit.'));
+    } finally {
+      setTakingSnapshot(false);
+    }
+  };
+
   const setManualPrice = async (key: string, price: number) => {
     await priceApi.setManual(key, price);
     await load();
@@ -126,7 +141,15 @@ export function PortfolioLayer() {
         <div style={{ color: 'var(--loss-on-dark)', fontSize: 15, lineHeight: 1.55 }}>{error}</div>
       )}
 
-      {data && <ResultHeader data={data} scopeLabel={selectionLabel} narrow={narrow} />}
+      {data && (
+        <ResultHeader
+          data={data}
+          scopeLabel={selectionLabel}
+          narrow={narrow}
+          onTakeSnapshot={() => void takeSnapshot()}
+          takingSnapshot={takingSnapshot}
+        />
+      )}
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <Button size="sm" onClick={openAdd}>
