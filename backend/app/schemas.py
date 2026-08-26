@@ -186,6 +186,61 @@ class TaxLossResponse(BaseModel):
 
 
 # --------------------------------------------------------------------------
+# Net worth — manual assets outside the securities engine
+# --------------------------------------------------------------------------
+
+ASSET_CATEGORIES = ("CASH", "REAL_ESTATE", "OTHER")
+
+
+class ManualAssetCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    category: str = Field("OTHER")
+    value_czk: float = Field(..., ge=0)
+    note: str = Field("", max_length=2000)
+
+    @field_validator("category")
+    @classmethod
+    def _known_category(cls, value: str) -> str:
+        value = value.upper()
+        if value not in ASSET_CATEGORIES:
+            raise ValueError(f"Neznámá kategorie. Povolené: {', '.join(ASSET_CATEGORIES)}.")
+        return value
+
+
+class ManualAssetUpdate(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=120)
+    category: str | None = None
+    value_czk: float | None = Field(None, ge=0)
+    note: str | None = Field(None, max_length=2000)
+
+    @field_validator("category")
+    @classmethod
+    def _known_category(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        value = value.upper()
+        if value not in ASSET_CATEGORIES:
+            raise ValueError(f"Neznámá kategorie. Povolené: {', '.join(ASSET_CATEGORIES)}.")
+        return value
+
+
+class ManualAssetResponse(BaseModel):
+    id: int
+    name: str
+    category: str
+    value_czk: float
+    note: str
+    updated_at: dt.datetime
+
+
+class NetWorthResponse(BaseModel):
+    securities_value_czk: float
+    manual_assets: list[ManualAssetResponse]
+    manual_assets_total_czk: float
+    net_worth_czk: float
+
+
+# --------------------------------------------------------------------------
 # Segments ("Vlastní rozdělení" — the user's own custom breakdown)
 # --------------------------------------------------------------------------
 

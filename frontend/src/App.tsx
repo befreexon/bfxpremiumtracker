@@ -3,6 +3,7 @@ import { AiLayer } from './pages/ai';
 import { AnalysisLayer } from './pages/analysis';
 import { AppShell } from './pages/AppShell';
 import { MarketsLayer } from './pages/markets';
+import { NetWorthLayer } from './pages/networth';
 import { PortfolioLayer } from './pages/portfolio';
 import { Settings } from './pages/Settings';
 import { SignIn } from './pages/SignIn';
@@ -23,6 +24,7 @@ export function App() {
         <Route path="/analyza" element={<AnalysisLayer />} />
         <Route path="/ai" element={<AiLayer />} />
         <Route path="/trhy" element={<MarketsLayer />} />
+        <Route path="/jmeni" element={<NetWorthLayer />} />
         <Route path="/nastaveni" element={<Settings />} />
         <Route path="*" element={<Navigate to="/portfolio" replace />} />
       </Route>

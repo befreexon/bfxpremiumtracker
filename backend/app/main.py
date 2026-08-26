@@ -23,6 +23,7 @@ from app.routers import (
     auth,
     imports,
     markets,
+    net_worth,
     notes,
     overview,
     portfolios,
@@ -83,6 +84,7 @@ app.include_router(markets.router)
 app.include_router(alerts.router)
 app.include_router(rebalance.router)
 app.include_router(tax_loss.router)
+app.include_router(net_worth.router)
 
 try:
     from app.routers import ai

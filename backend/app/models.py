@@ -265,6 +265,24 @@ class RebalanceTarget(Base):
     )
 
 
+class ManualAsset(Base):
+    """A hand-valued thing outside the securities engine — cash, real estate,
+    a car, anything else — that still counts toward net worth. No FIFO, no
+    tax test, no live price: the user types a value and updates it whenever
+    they want, the same way Kubera-style net-worth trackers treat these."""
+
+    __tablename__ = "manual_assets"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    category: Mapped[str] = mapped_column(String(16), default="OTHER")  # CASH | REAL_ESTATE | OTHER
+    value_czk: Mapped[float] = mapped_column(Float)
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now)
+
+
 class Snapshot(Base):
     """Monthly point for the value chart. The chart is never reconstructed
     backwards — that would need historical prices and FX for every day."""

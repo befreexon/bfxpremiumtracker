@@ -14,7 +14,9 @@ import type {
   HoldingsInput,
   ImportPreview,
   ImportResult,
+  ManualAsset,
   MarketQuote,
+  NetWorth,
   Note,
   Overview,
   Portfolio,
@@ -439,4 +441,18 @@ export const rebalance = {
 export const taxLoss = {
   get: (portfolioIds?: number[]) =>
     request<TaxLossResponse>(`/api/tax-loss${query({ portfolio_ids: portfolioIds })}`),
+};
+
+// --- Net worth ---------------------------------------------------------------
+
+export const netWorth = {
+  get: () => request<NetWorth>('/api/net-worth'),
+
+  createAsset: (payload: { name: string; category: string; value_czk: number; note?: string }) =>
+    request<ManualAsset>('/api/net-worth/assets', json('POST', payload)),
+
+  updateAsset: (id: number, patch: { name?: string; category?: string; value_czk?: number; note?: string }) =>
+    request<ManualAsset>(`/api/net-worth/assets/${id}`, json('PATCH', patch)),
+
+  removeAsset: (id: number) => request<void>(`/api/net-worth/assets/${id}`, { method: 'DELETE' }),
 };

@@ -21,6 +21,7 @@ const LAYERS = [
   { to: '/analyza', label: 'Analýza' },
   { to: '/ai', label: 'AI analýza' },
   { to: '/trhy', label: 'Trhy' },
+  { to: '/jmeni', label: 'Čisté jmění' },
 ];
 
 export function AppShell() {

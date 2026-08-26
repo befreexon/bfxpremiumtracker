@@ -214,6 +214,24 @@ export interface TaxLossResponse {
   candidates: TaxLossCandidate[];
 }
 
+export type AssetCategory = 'CASH' | 'REAL_ESTATE' | 'OTHER';
+
+export interface ManualAsset {
+  id: number;
+  name: string;
+  category: AssetCategory;
+  value_czk: number;
+  note: string;
+  updated_at: string;
+}
+
+export interface NetWorth {
+  securities_value_czk: number;
+  manual_assets: ManualAsset[];
+  manual_assets_total_czk: number;
+  net_worth_czk: number;
+}
+
 export type AlertType =
   | 'watchlist_target'
   | 'concentration'
