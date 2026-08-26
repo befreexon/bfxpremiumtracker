@@ -10,12 +10,13 @@ the exact same tables and manual-price mechanism a real user's own data would
 use — nothing here is a special case the rest of the app treats differently.
 """
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
 from app.engine.currency import major_currency, quoted_rate_from_major
 from app.models import (
+    InstrumentInfo,
     Portfolio,
     Segment,
     SegmentMember,
@@ -153,6 +154,24 @@ def seed_demo_account(db: Session) -> None:
         ("BTC|CRYPTO|USD", 64000.00),
     ]:
         set_manual_price(db, user.id, key, price)
+
+    # --- Sector classification — real, not invented, just pre-warming the
+    # shared cache so the diversification view works without internet access.
+    # VWCE (a broad ETF) and BTC genuinely have no sector, same as a live
+    # lookup would report, so they are left out and fall into "Neznámý sektor".
+    for key, sector, industry, country in [
+        ("AAPL|NASDAQ|USD", "Technology", "Consumer Electronics", "United States"),
+        ("WIZZ|LSE|GBX", "Industrials", "Airlines", "United Kingdom"),
+        ("CEZ|PSE|CZK", "Utilities", "Utilities—Regulated Electric", "Czech Republic"),
+        ("NVDA|NASDAQ|USD", "Technology", "Semiconductors", "United States"),
+    ]:
+        db.add(
+            InstrumentInfo(
+                instrument_key=key, sector=sector, industry=industry, country=country,
+                fetched_at=datetime.now(timezone.utc),
+            )
+        )
+    db.commit()
 
     # --- Watchlist: one already at target, two still waiting ---------------
 

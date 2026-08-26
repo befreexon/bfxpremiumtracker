@@ -877,3 +877,48 @@ def test_one_account_cannot_delete_anothers_note(client):
     response = client.delete(f"/api/notes/{note_id}", headers=auth(theirs))
 
     assert response.status_code == 404
+
+
+# --- Sector diversification --------------------------------------------------
+
+
+def test_the_overview_reports_allocation_by_sector(client, monkeypatch):
+    from app.services.classification import Classification
+
+    monkeypatch.setattr(
+        "app.services.portfolio_view.classification_service.get_classifications",
+        lambda db, instruments, allow_fetch: {
+            "AAPL|NASDAQ|CZK": Classification(sector="Technology", industry=None, country="USA"),
+        },
+    )
+    token = register(client)
+    portfolio_id = client.get("/api/portfolios", headers=auth(token)).json()[0]["id"]
+    add_transaction(client, token, portfolio_id, ticker="AAPL", currency="CZK", fx_rate=None, price=100.0, quantity=10)
+    client.put(
+        "/api/prices/manual", headers=auth(token),
+        json={"instrument_key": "AAPL|NASDAQ|CZK", "price": 100.0},
+    )
+
+    overview = client.get("/api/overview", headers=auth(token)).json()
+
+    assert overview["allocation_by_sector"] == [
+        {"label": "Technology", "value_czk": pytest.approx(1000.0), "weight": pytest.approx(1.0), "color": None}
+    ]
+
+
+def test_an_instrument_with_no_known_sector_falls_into_the_unknown_bucket(client, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.portfolio_view.classification_service.get_classifications",
+        lambda db, instruments, allow_fetch: {},
+    )
+    token = register(client)
+    portfolio_id = client.get("/api/portfolios", headers=auth(token)).json()[0]["id"]
+    add_transaction(client, token, portfolio_id, ticker="AAPL", currency="CZK", fx_rate=None, price=100.0, quantity=10)
+    client.put(
+        "/api/prices/manual", headers=auth(token),
+        json={"instrument_key": "AAPL|NASDAQ|CZK", "price": 100.0},
+    )
+
+    overview = client.get("/api/overview", headers=auth(token)).json()
+
+    assert overview["allocation_by_sector"][0]["label"] == "Neznámý sektor"

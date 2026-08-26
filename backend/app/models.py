@@ -157,6 +157,21 @@ class PriceCache(Base):
     fetched_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now)
 
 
+class InstrumentInfo(Base):
+    """Sector/industry/country per instrument, cached like PriceCache and
+    shared across users — a company's sector isn't something each user has
+    their own answer to, and it barely changes, so the cache lifetime is
+    long (see classification.py)."""
+
+    __tablename__ = "instrument_info"
+
+    instrument_key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    sector: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    industry: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    country: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    fetched_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now)
+
+
 class ManualPrice(Base):
     """A price the user typed in. Always wins over the cached one."""
 

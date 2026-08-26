@@ -16,9 +16,12 @@ from app.engine.positions import (
 )
 from app.engine.xirr import CashFlow
 from app.models import Portfolio, Segment, SegmentMember, Transaction, User
+from app.services import classification as classification_service
 from app.services import fx as fx_service
 from app.services import prices as price_service
 from app.services import snapshots as snapshot_service
+
+UNKNOWN_SECTOR = "Neznámý sektor"
 
 DIVIDEND_HORIZON_DAYS = 365
 
@@ -118,7 +121,40 @@ def build_view(
     ]
     _fill_ytd_return(db, view, rows, resolved_ids, today)
     _fill_segment_allocation(db, view, user)
+    _fill_sector_allocation(db, view, instruments, allow_fetch=allow_fetch)
     return view
+
+
+def _fill_sector_allocation(
+    db: Session,
+    view: PortfolioView,
+    instruments: list[tuple[str, str, str, str]],
+    allow_fetch: bool,
+) -> None:
+    """Diversification by sector, from cached Yahoo Finance classification.
+    Skipped entirely when nothing is cached yet and fetching isn't allowed —
+    an empty list, not a guess."""
+    if not instruments:
+        return
+
+    classifications = classification_service.get_classifications(db, instruments, allow_fetch=allow_fetch)
+    by_key = {position.instrument_key: position for position in view.positions}
+
+    totals: dict[str, float] = {}
+    for ticker, exchange, currency, _asset_class in instruments:
+        key = f"{ticker}|{exchange}|{currency}"
+        position = by_key.get(key)
+        if position is None or not position.value_czk:
+            continue
+        sector = classifications.get(key)
+        label = (sector.sector if sector else None) or UNKNOWN_SECTOR
+        totals[label] = totals.get(label, 0.0) + position.value_czk
+
+    total = view.value_czk or 0.0
+    view.allocation_by_sector = [
+        AllocationSlice(label=label, value_czk=value, weight=(value / total if total else 0.0))
+        for label, value in sorted(totals.items(), key=lambda kv: -kv[1])
+    ]
 
 
 def _fill_dividend_income(view: PortfolioView, rows: list[Transaction], today: date) -> None:

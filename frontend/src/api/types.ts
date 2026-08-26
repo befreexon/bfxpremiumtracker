@@ -158,6 +158,7 @@ export interface Overview {
   allocation_by_currency: AllocationSlice[];
   allocation_by_instrument: AllocationSlice[];
   allocation_by_segment: AllocationSlice[];
+  allocation_by_sector: AllocationSlice[];
   concentration_warnings: ConcentrationWarning[];
   upcoming_dividends: UpcomingDividend[];
   trailing_12m_dividends_czk: number;

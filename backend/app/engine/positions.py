@@ -118,6 +118,10 @@ class PortfolioView:
     #: define at least one segment. Filled in by services.portfolio_view, not
     #: here, since it depends on data this pure engine has no access to.
     allocation_by_segment: list[AllocationSlice] = field(default_factory=list)
+    #: Sector breakdown from cached Yahoo Finance classification data. An
+    #: instrument with no known sector falls into "Neznámý sektor" rather than
+    #: being silently dropped. Filled in by services.portfolio_view.
+    allocation_by_sector: list[AllocationSlice] = field(default_factory=list)
     concentration_warnings: list[dict] = field(default_factory=list)
     #: Cadence-projected future payments over the next 12 months, one entry per
     #: expected payment (an instrument paying quarterly contributes up to four).

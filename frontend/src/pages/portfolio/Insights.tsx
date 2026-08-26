@@ -39,6 +39,7 @@ export function Insights({ data, scopeIds, benchmarkTicker, onChanged }: Insight
       <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
         <Allocation title="Podle třídy aktiv" slices={data.allocation_by_class} />
         <Allocation title="Podle měny" slices={data.allocation_by_currency} />
+        <Allocation title="Podle sektoru" slices={data.allocation_by_sector} labelWidth={150} />
       </div>
       <Rebalance scopeIds={scopeIds} />
       <Segments data={data} onChanged={onChanged} />
@@ -136,7 +137,15 @@ function InstrumentDonut({ slices }: { slices: AllocationSlice[] }) {
   );
 }
 
-function Allocation({ title, slices }: { title: string; slices: AllocationSlice[] }) {
+function Allocation({
+  title,
+  slices,
+  labelWidth = 72,
+}: {
+  title: string;
+  slices: AllocationSlice[];
+  labelWidth?: number;
+}) {
   if (slices.length === 0) return null;
 
   return (
@@ -145,7 +154,7 @@ function Allocation({ title, slices }: { title: string; slices: AllocationSlice[
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 14 }}>
         {slices.map((slice) => (
           <div key={slice.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 14, width: 72 }}>{slice.label}</span>
+            <span style={{ fontSize: 14, width: labelWidth, flexShrink: 0 }}>{slice.label}</span>
             <div
               style={{
                 flex: 1,
