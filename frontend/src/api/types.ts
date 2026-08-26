@@ -232,6 +232,17 @@ export interface NetWorth {
   net_worth_czk: number;
 }
 
+export interface Goal {
+  id: number;
+  name: string;
+  target_value_czk: number;
+  target_date: string;
+  current_value_czk: number;
+  progress_pct: number;
+  required_annual_return_pct: number | null;
+  reached: boolean;
+}
+
 export type AlertType =
   | 'watchlist_target'
   | 'concentration'

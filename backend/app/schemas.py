@@ -241,6 +241,35 @@ class NetWorthResponse(BaseModel):
 
 
 # --------------------------------------------------------------------------
+# Financial goals
+# --------------------------------------------------------------------------
+
+
+class GoalCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    target_value_czk: float = Field(..., gt=0)
+    target_date: dt.date
+
+
+class GoalUpdate(BaseModel):
+    name: str | None = Field(None, min_length=1, max_length=120)
+    target_value_czk: float | None = Field(None, gt=0)
+    target_date: dt.date | None = None
+
+
+class GoalResponse(BaseModel):
+    id: int
+    name: str
+    target_value_czk: float
+    target_date: dt.date
+    current_value_czk: float
+    progress_pct: float
+    #: None once the target date has passed, or once the goal is already met.
+    required_annual_return_pct: float | None
+    reached: bool
+
+
+# --------------------------------------------------------------------------
 # Segments ("Vlastní rozdělení" — the user's own custom breakdown)
 # --------------------------------------------------------------------------
 

@@ -21,6 +21,7 @@ from app.seed import seed_demo_account
 from app.routers import (
     alerts,
     auth,
+    goals,
     imports,
     markets,
     net_worth,
@@ -85,6 +86,7 @@ app.include_router(alerts.router)
 app.include_router(rebalance.router)
 app.include_router(tax_loss.router)
 app.include_router(net_worth.router)
+app.include_router(goals.router)
 
 try:
     from app.routers import ai

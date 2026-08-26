@@ -11,6 +11,7 @@ import type { AssetCategory, ManualAsset, NetWorth } from '../../api/types';
 import { Button } from '../../design/components';
 import { czk, dateTime } from '../../lib/format';
 import { DARK, Panel, StatTile } from '../ai/primitives';
+import { Goals } from './Goals';
 
 const CATEGORY_LABEL: Record<AssetCategory, string> = {
   CASH: 'Hotovost',
@@ -187,6 +188,8 @@ export function NetWorthLayer() {
           </div>
         )}
       </Panel>
+
+      <Goals />
     </div>
   );
 }

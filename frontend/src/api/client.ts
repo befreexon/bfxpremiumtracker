@@ -11,6 +11,7 @@ import type {
   Alert,
   AnalyzeResult,
   BenchmarkComparison,
+  Goal,
   HoldingsInput,
   ImportPreview,
   ImportResult,
@@ -455,4 +456,18 @@ export const netWorth = {
     request<ManualAsset>(`/api/net-worth/assets/${id}`, json('PATCH', patch)),
 
   removeAsset: (id: number) => request<void>(`/api/net-worth/assets/${id}`, { method: 'DELETE' }),
+};
+
+// --- Financial goals -----------------------------------------------------
+
+export const goals = {
+  list: () => request<Goal[]>('/api/goals'),
+
+  create: (payload: { name: string; target_value_czk: number; target_date: string }) =>
+    request<Goal>('/api/goals', json('POST', payload)),
+
+  update: (id: number, patch: { name?: string; target_value_czk?: number; target_date?: string }) =>
+    request<Goal>(`/api/goals/${id}`, json('PATCH', patch)),
+
+  remove: (id: number) => request<void>(`/api/goals/${id}`, { method: 'DELETE' }),
 };

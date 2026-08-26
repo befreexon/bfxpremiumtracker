@@ -283,6 +283,21 @@ class ManualAsset(Base):
     updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now)
 
 
+class FinancialGoal(Base):
+    """A named target — "Důchod", "Záloha na byt" — measured against net
+    worth (securities plus manual assets). The required-return math is
+    computed on read, not stored, so it always reflects today's value."""
+
+    __tablename__ = "financial_goals"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    target_value_czk: Mapped[float] = mapped_column(Float)
+    target_date: Mapped[dt.date] = mapped_column(Date)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now)
+
+
 class Snapshot(Base):
     """Monthly point for the value chart. The chart is never reconstructed
     backwards — that would need historical prices and FX for every day."""
