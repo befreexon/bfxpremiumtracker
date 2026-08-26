@@ -233,6 +233,23 @@ class TickerNote(Base):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=_now)
 
 
+class RebalanceTarget(Base):
+    """The user's own target allocation by asset class — e.g. "80% STOCK, 15%
+    ETF, 5% CRYPTO" — used to suggest what to buy or sell to get there. Purely
+    the user's own numbers; the app never invents a target."""
+
+    __tablename__ = "rebalance_targets"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    asset_class: Mapped[str] = mapped_column(String(16))
+    target_pct: Mapped[float] = mapped_column(Float)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "asset_class", name="uq_rebalance_target_user_class"),
+    )
+
+
 class Snapshot(Base):
     """Monthly point for the value chart. The chart is never reconstructed
     backwards — that would need historical prices and FX for every day."""

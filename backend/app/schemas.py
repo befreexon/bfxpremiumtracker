@@ -131,6 +131,41 @@ class TransactionResponse(TransactionBase):
 
 
 # --------------------------------------------------------------------------
+# Rebalancing — target allocation by asset class
+# --------------------------------------------------------------------------
+
+
+class RebalanceTargetsSet(BaseModel):
+    #: asset_class -> target percentage (0-100). A class left out is treated
+    #: as having no target and is excluded from the suggestion list.
+    targets: dict[str, float]
+
+    @field_validator("targets")
+    @classmethod
+    def _known_classes_and_range(cls, value: dict[str, float]) -> dict[str, float]:
+        for asset_class, pct in value.items():
+            if asset_class not in ASSET_CLASSES:
+                raise ValueError(f"Neznámá třída aktiva. Povolené: {', '.join(ASSET_CLASSES)}.")
+            if pct < 0 or pct > 100:
+                raise ValueError("Cílové procento musí být mezi 0 a 100.")
+        return value
+
+
+class RebalanceSuggestion(BaseModel):
+    asset_class: str
+    target_pct: float
+    current_pct: float
+    current_value_czk: float
+    target_value_czk: float
+    delta_czk: float  # positive = buy this much more, negative = sell
+
+
+class RebalanceResponse(BaseModel):
+    targets_sum_pct: float
+    suggestions: list[RebalanceSuggestion]
+
+
+# --------------------------------------------------------------------------
 # Segments ("Vlastní rozdělení" — the user's own custom breakdown)
 # --------------------------------------------------------------------------
 

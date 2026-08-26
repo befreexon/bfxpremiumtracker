@@ -19,6 +19,7 @@ import type {
   Overview,
   Portfolio,
   Position,
+  RebalanceResponse,
   RefreshResult,
   MonteCarloResult,
   OptimizeResult,
@@ -420,4 +421,14 @@ export const markets = {
 
 export const alerts = {
   list: (portfolioIds?: number[]) => request<Alert[]>(`/api/alerts${query({ portfolio_ids: portfolioIds })}`),
+};
+
+// --- Rebalancing ---------------------------------------------------------
+
+export const rebalance = {
+  getTargets: () => request<Record<string, number>>('/api/rebalance/targets'),
+  setTargets: (targets: Record<string, number>) =>
+    request<Record<string, number>>('/api/rebalance/targets', json('PUT', { targets })),
+  get: (portfolioIds?: number[]) =>
+    request<RebalanceResponse>(`/api/rebalance${query({ portfolio_ids: portfolioIds })}`),
 };

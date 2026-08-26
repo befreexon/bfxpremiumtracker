@@ -28,6 +28,7 @@ from app.routers import (
     portfolios,
     prices,
     quant,
+    rebalance,
     segments,
     snapshots,
     transactions,
@@ -79,6 +80,7 @@ app.include_router(transactions.router)
 app.include_router(notes.router)
 app.include_router(markets.router)
 app.include_router(alerts.router)
+app.include_router(rebalance.router)
 
 try:
     from app.routers import ai

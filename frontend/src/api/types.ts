@@ -184,6 +184,20 @@ export interface Note {
   created_at: string;
 }
 
+export interface RebalanceSuggestion {
+  asset_class: AssetClass;
+  target_pct: number;
+  current_pct: number;
+  current_value_czk: number;
+  target_value_czk: number;
+  delta_czk: number;
+}
+
+export interface RebalanceResponse {
+  targets_sum_pct: number;
+  suggestions: RebalanceSuggestion[];
+}
+
 export type AlertType =
   | 'watchlist_target'
   | 'concentration'

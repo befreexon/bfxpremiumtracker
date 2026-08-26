@@ -18,6 +18,7 @@ import type { AllocationSlice, BenchmarkComparison, Overview, Snapshot } from '.
 import { Button } from '../../design/components';
 import { NUMERIC_STYLE, TONE_COLOR_ON_DARK, arrowFor, czk, date as formatDate, share, toneFor } from '../../lib/format';
 import { Dividends } from './Dividends';
+import { Rebalance } from './Rebalance';
 import { Segments } from './Segments';
 import { CAPTION, PANEL, SECTION_TITLE, errorText } from './theme';
 import { TransactionJournal } from './TransactionJournal';
@@ -39,6 +40,7 @@ export function Insights({ data, scopeIds, benchmarkTicker, onChanged }: Insight
         <Allocation title="Podle třídy aktiv" slices={data.allocation_by_class} />
         <Allocation title="Podle měny" slices={data.allocation_by_currency} />
       </div>
+      <Rebalance scopeIds={scopeIds} />
       <Segments data={data} onChanged={onChanged} />
       <Concentration data={data} />
       <Dividends data={data} />
