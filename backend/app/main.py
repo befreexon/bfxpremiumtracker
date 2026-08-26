@@ -19,6 +19,7 @@ from app.config import CORS_ORIGINS, SEED_DEMO_ACCOUNT
 from app.db import SessionLocal, init_db
 from app.seed import seed_demo_account
 from app.routers import (
+    alerts,
     auth,
     imports,
     markets,
@@ -77,6 +78,7 @@ app.include_router(segments.router)
 app.include_router(transactions.router)
 app.include_router(notes.router)
 app.include_router(markets.router)
+app.include_router(alerts.router)
 
 try:
     from app.routers import ai

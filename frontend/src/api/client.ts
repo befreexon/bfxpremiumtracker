@@ -8,6 +8,7 @@
  */
 
 import type {
+  Alert,
   AnalyzeResult,
   BenchmarkComparison,
   HoldingsInput,
@@ -413,4 +414,10 @@ export const notes = {
 
 export const markets = {
   overview: () => request<MarketQuote[]>('/api/markets/overview'),
+};
+
+// --- Alerts ------------------------------------------------------------------
+
+export const alerts = {
+  list: (portfolioIds?: number[]) => request<Alert[]>(`/api/alerts${query({ portfolio_ids: portfolioIds })}`),
 };

@@ -1,9 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { alerts as alertsApi } from '../api/client';
+import type { Alert, AlertSeverity } from '../api/types';
 import logo from '../assets/logo.svg';
 import { Button } from '../design/components';
 import { useAuth } from '../state/authContext';
 import { usePortfolios } from '../state/portfolioContext';
+
+const ALERT_POLL_MS = 60_000;
+
+const SEVERITY_COLOR: Record<AlertSeverity, string> = {
+  success: 'var(--gain-on-dark)',
+  warning: 'var(--accent-warning)',
+  info: 'var(--on-dark-mute)',
+};
 
 const LAYERS = [
   { to: '/portfolio', label: 'Portfolio' },
@@ -70,6 +80,7 @@ export function AppShell() {
         </nav>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <AlertsBell />
           {showsPortfolioSwitcher && <PortfolioSwitcher />}
           <NavLink
             to="/nastaveni"
@@ -211,5 +222,149 @@ function SwitcherOption({
       {label}
       {hint && <span style={{ fontSize: 12, color: 'var(--on-dark-mute)' }}>{hint}</span>}
     </button>
+  );
+}
+
+/**
+ * A consolidated "needs your attention" feed — watchlist targets reached,
+ * concentration, tax-test lots about to clear, missing price/FX — gathered
+ * from screens that already show each individually. Always scoped to every
+ * portfolio, independent of whatever the page-level switcher is showing.
+ */
+function AlertsBell() {
+  const [items, setItems] = useState<Alert[]>([]);
+  const [open, setOpen] = useState(false);
+  const container = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      alertsApi
+        .list()
+        .then((result) => {
+          if (!cancelled) setItems(result);
+        })
+        .catch(() => {
+          // A failed poll just leaves the previous list showing.
+        });
+    };
+    load();
+    const interval = setInterval(load, ALERT_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: MouseEvent) => {
+      if (!container.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  return (
+    <div ref={container} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setOpen((previous) => !previous)}
+        aria-label={`Upozornění (${items.length})`}
+        style={{
+          position: 'relative',
+          width: 36,
+          height: 36,
+          borderRadius: 'var(--radius-full)',
+          border: '1px solid var(--hairline-dark)',
+          background: 'var(--surface-elevated)',
+          color: '#fff',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 16,
+        }}
+      >
+        🔔
+        {items.length > 0 && (
+          <span
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              top: -2,
+              right: -2,
+              minWidth: 16,
+              height: 16,
+              padding: '0 3px',
+              borderRadius: 'var(--radius-full)',
+              background: 'var(--gold)',
+              color: 'var(--on-gold)',
+              fontSize: 10,
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {items.length}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '100%',
+            right: 0,
+            marginTop: 6,
+            width: 340,
+            maxHeight: 420,
+            overflowY: 'auto',
+            background: 'var(--surface-elevated)',
+            border: '1px solid var(--hairline-dark)',
+            borderRadius: 'var(--radius-md)',
+            zIndex: 20,
+          }}
+        >
+          {items.length === 0 ? (
+            <div style={{ padding: 16, fontSize: 13, color: 'var(--on-dark-mute)' }}>
+              Nic nečeká na tvou pozornost.
+            </div>
+          ) : (
+            items.map((alert) => (
+              <Link
+                key={alert.id}
+                to={alert.link}
+                onClick={() => setOpen(false)}
+                style={{
+                  display: 'block',
+                  padding: '12px 16px',
+                  borderBottom: '1px solid var(--hairline-dark)',
+                  textDecoration: 'none',
+                  color: '#fff',
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  style={{
+                    display: 'inline-block',
+                    width: 7,
+                    height: 7,
+                    borderRadius: 'var(--radius-full)',
+                    background: SEVERITY_COLOR[alert.severity],
+                    marginRight: 8,
+                  }}
+                />
+                {alert.message}
+              </Link>
+            ))
+          )}
+        </div>
+      )}
+    </div>
   );
 }

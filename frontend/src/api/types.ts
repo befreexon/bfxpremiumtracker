@@ -184,6 +184,22 @@ export interface Note {
   created_at: string;
 }
 
+export type AlertType =
+  | 'watchlist_target'
+  | 'concentration'
+  | 'tax_test_soon'
+  | 'missing_price'
+  | 'missing_fx';
+export type AlertSeverity = 'success' | 'warning' | 'info';
+
+export interface Alert {
+  id: string;
+  type: AlertType;
+  severity: AlertSeverity;
+  message: string;
+  link: string;
+}
+
 export interface MarketQuote {
   key: string;
   label: string;
