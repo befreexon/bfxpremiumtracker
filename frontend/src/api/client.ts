@@ -26,6 +26,7 @@ import type {
   QuantBenchmarkResult,
   Segment,
   Snapshot,
+  TaxLossResponse,
   TickerAnalysis,
   Transaction,
   User,
@@ -431,4 +432,11 @@ export const rebalance = {
     request<Record<string, number>>('/api/rebalance/targets', json('PUT', { targets })),
   get: (portfolioIds?: number[]) =>
     request<RebalanceResponse>(`/api/rebalance${query({ portfolio_ids: portfolioIds })}`),
+};
+
+// --- Tax-loss harvesting -----------------------------------------------------
+
+export const taxLoss = {
+  get: (portfolioIds?: number[]) =>
+    request<TaxLossResponse>(`/api/tax-loss${query({ portfolio_ids: portfolioIds })}`),
 };

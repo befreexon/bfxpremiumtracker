@@ -31,6 +31,7 @@ from app.routers import (
     rebalance,
     segments,
     snapshots,
+    tax_loss,
     transactions,
     watchlist,
 )
@@ -81,6 +82,7 @@ app.include_router(notes.router)
 app.include_router(markets.router)
 app.include_router(alerts.router)
 app.include_router(rebalance.router)
+app.include_router(tax_loss.router)
 
 try:
     from app.routers import ai

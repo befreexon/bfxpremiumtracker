@@ -199,6 +199,21 @@ export interface RebalanceResponse {
   suggestions: RebalanceSuggestion[];
 }
 
+export interface TaxLossCandidate {
+  instrument_key: string;
+  ticker: string;
+  lot_date: string;
+  quantity: number;
+  unrealized_loss_czk: number;
+  tax_test_status: TaxTestStatus;
+  tax_test_days_remaining: number | null;
+}
+
+export interface TaxLossResponse {
+  taxable_gain_ytd_czk: number;
+  candidates: TaxLossCandidate[];
+}
+
 export type AlertType =
   | 'watchlist_target'
   | 'concentration'

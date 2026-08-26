@@ -20,6 +20,7 @@ import { NUMERIC_STYLE, TONE_COLOR_ON_DARK, arrowFor, czk, date as formatDate, s
 import { Dividends } from './Dividends';
 import { Rebalance } from './Rebalance';
 import { Segments } from './Segments';
+import { TaxLossHarvesting } from './TaxLossHarvesting';
 import { CAPTION, PANEL, SECTION_TITLE, errorText } from './theme';
 import { TransactionJournal } from './TransactionJournal';
 
@@ -44,6 +45,7 @@ export function Insights({ data, scopeIds, benchmarkTicker, onChanged }: Insight
       <Rebalance scopeIds={scopeIds} />
       <Segments data={data} onChanged={onChanged} />
       <Concentration data={data} />
+      <TaxLossHarvesting scopeIds={scopeIds} />
       <Dividends data={data} />
       <TransactionJournal scopeIds={scopeIds} />
     </div>

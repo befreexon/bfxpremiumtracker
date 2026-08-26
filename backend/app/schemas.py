@@ -166,6 +166,26 @@ class RebalanceResponse(BaseModel):
 
 
 # --------------------------------------------------------------------------
+# Tax-loss harvesting
+# --------------------------------------------------------------------------
+
+
+class TaxLossCandidate(BaseModel):
+    instrument_key: str
+    ticker: str
+    lot_date: dt.date
+    quantity: float
+    unrealized_loss_czk: float
+    tax_test_status: str
+    tax_test_days_remaining: int | None
+
+
+class TaxLossResponse(BaseModel):
+    taxable_gain_ytd_czk: float
+    candidates: list[TaxLossCandidate]
+
+
+# --------------------------------------------------------------------------
 # Segments ("Vlastní rozdělení" — the user's own custom breakdown)
 # --------------------------------------------------------------------------
 
