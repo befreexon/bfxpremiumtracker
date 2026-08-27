@@ -11,6 +11,7 @@ import type {
   Alert,
   AnalyzeResult,
   BenchmarkComparison,
+  CorrelationResult,
   Goal,
   HoldingsInput,
   ImportPreview,
@@ -383,6 +384,9 @@ export const quant = {
   monteCarlo: (
     input: QuantInput & { num_simulations: number; time_horizon: number; initial_investment: number },
   ) => request<MonteCarloResult>('/api/portfolio/monte-carlo', json('POST', input)),
+
+  correlation: (input: { tickers: string[]; start_date: string; end_date: string }) =>
+    request<CorrelationResult>('/api/portfolio/correlation', json('POST', input)),
 
   optimize: (input: {
     tickers: string[];

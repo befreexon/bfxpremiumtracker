@@ -490,6 +490,12 @@ class MonteCarloRequest(PortfolioRequest):
     initial_investment: float = Field(10000, ge=100)
 
 
+class CorrelationRequest(BaseModel):
+    tickers: list[str] = Field(..., min_length=2)
+    start_date: str
+    end_date: str
+
+
 class OptimizeRequest(BaseModel):
     tickers: list[str] = Field(..., min_length=2)
     current_weights: list[float] | None = None
@@ -528,6 +534,11 @@ class MonteCarloResponse(BaseModel):
     initial_investment: float
     time_horizon: int
     num_simulations: int
+
+
+class CorrelationResponse(BaseModel):
+    tickers: list[str]
+    matrix: list[list[float]]
 
 
 class OptimizeResponse(BaseModel):

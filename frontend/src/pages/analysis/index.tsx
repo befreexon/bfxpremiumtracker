@@ -4,11 +4,12 @@ import { Button, Card, Input, Tabs } from '../../design/components';
 import { share } from '../../lib/format';
 import { usePortfolios } from '../../state/portfolioContext';
 import { BenchmarkPanel } from './BenchmarkPanel';
+import { CorrelationPanel } from './CorrelationPanel';
 import { MonteCarloPanel } from './MonteCarloPanel';
 import { OptimizePanel } from './OptimizePanel';
 import { PerformancePanel } from './PerformancePanel';
 
-const TABS = ['Výkonnost', 'Benchmark', 'Monte Carlo', 'Optimalizace'];
+const TABS = ['Výkonnost', 'Benchmark', 'Korelace', 'Monte Carlo', 'Optimalizace'];
 
 interface Row {
   ticker: string;
@@ -211,8 +212,9 @@ export function AnalysisLayer() {
         <div>
           {tab === 0 && <PerformancePanel input={input} />}
           {tab === 1 && <BenchmarkPanel input={input} />}
-          {tab === 2 && <MonteCarloPanel input={input} />}
-          {tab === 3 && <OptimizePanel input={input} />}
+          {tab === 2 && <CorrelationPanel input={input} />}
+          {tab === 3 && <MonteCarloPanel input={input} />}
+          {tab === 4 && <OptimizePanel input={input} />}
         </div>
       ) : (
         <div style={{ color: 'var(--on-dark-mute)', fontSize: 15, lineHeight: 1.55, maxWidth: 620 }}>

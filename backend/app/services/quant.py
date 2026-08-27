@@ -10,6 +10,8 @@ from portfolio_analysis import (
 )
 from app.schemas import (
     AnalyzeResponse,
+    CorrelationRequest,
+    CorrelationResponse,
     MonteCarloRequest,
     MonteCarloResponse,
     OptimizeRequest,
@@ -129,6 +131,24 @@ def run_monte_carlo(req: MonteCarloRequest) -> MonteCarloResponse:
         time_horizon=req.time_horizon,
         num_simulations=req.num_simulations,
     )
+
+
+def _correlation_from_returns(data: pd.DataFrame, tickers: list[str]) -> list[list[float]]:
+    """Pure so the matrix math is testable without a network call."""
+    returns = data[tickers].pct_change().dropna()
+    corr = returns.corr()
+    return [[round(float(corr.loc[a, b]), 4) for b in tickers] for a in tickers]
+
+
+def correlation_matrix(req: CorrelationRequest) -> CorrelationResponse:
+    tickers = [t.strip().upper() for t in req.tickers]
+    if len(set(tickers)) < 2:
+        raise AnalysisError("Correlation needs at least two distinct tickers.")
+
+    data = _load_prices(tickers, req.start_date, req.end_date)
+    matrix = _correlation_from_returns(data, tickers)
+
+    return CorrelationResponse(tickers=tickers, matrix=matrix)
 
 
 def optimize_portfolio(req: OptimizeRequest) -> OptimizeResponse:

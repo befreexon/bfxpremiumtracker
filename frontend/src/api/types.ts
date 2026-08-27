@@ -520,6 +520,11 @@ export interface MonteCarloResult {
   num_simulations: number;
 }
 
+export interface CorrelationResult {
+  tickers: string[];
+  matrix: number[][];
+}
+
 export interface OptimizeResult {
   strategy: string;
   weights: Record<string, number>;

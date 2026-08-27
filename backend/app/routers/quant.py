@@ -16,6 +16,8 @@ from app.deps import current_user
 from app.models import User
 from app.schemas import (
     AnalyzeResponse,
+    CorrelationRequest,
+    CorrelationResponse,
     MonteCarloRequest,
     MonteCarloResponse,
     OptimizeRequest,
@@ -29,6 +31,7 @@ from app.services.quant import (
     AnalysisError,
     analyze_portfolio,
     compare_benchmark,
+    correlation_matrix,
     optimize_portfolio,
     run_monte_carlo,
 )
@@ -56,6 +59,11 @@ def benchmark(req: QuantBenchmarkRequest) -> QuantBenchmarkResponse:
 @router.post("/monte-carlo", response_model=MonteCarloResponse)
 def monte_carlo(req: MonteCarloRequest) -> MonteCarloResponse:
     return _guard(run_monte_carlo, req)
+
+
+@router.post("/correlation", response_model=CorrelationResponse)
+def correlation(req: CorrelationRequest) -> CorrelationResponse:
+    return _guard(correlation_matrix, req)
 
 
 @router.post("/optimize", response_model=OptimizeResponse)
