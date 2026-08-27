@@ -115,6 +115,7 @@ def build_view(
     )
     view.upcoming_dividends = upcoming_dividends(grouped, today)
     _fill_dividend_income(view, rows, today)
+    _fill_dividend_growth(view, rows, today)
 
     resolved_ids = portfolio_ids or [
         p.id for p in db.query(Portfolio).filter(Portfolio.user_id == user.id)
@@ -194,6 +195,46 @@ def _fill_dividend_income(view: PortfolioView, rows: list[Transaction], today: d
         view.warnings.append(
             "Výnos z dividend nezahrnuje výplaty bez známého kurzu k datu obchodu."
         )
+
+
+def _fill_dividend_growth(view: PortfolioView, rows: list[Transaction], today: date) -> None:
+    """Trailing 12 months of dividends per instrument against the 12 months
+    before that — the same actually-received payments as the yield above,
+    just split into two windows instead of one. A ticker that paid nothing in
+    the prior window has no baseline to grow from, so its rate is left null
+    rather than reported as infinite or invented."""
+    current_cutoff = today - timedelta(days=365)
+    prior_cutoff = today - timedelta(days=730)
+
+    current: dict[str, float] = {}
+    prior: dict[str, float] = {}
+
+    for row in rows:
+        if row.type != fifo.DIV:
+            continue
+        fx = _to_tx_input(row).effective_fx()
+        if fx is None:
+            continue
+        net = (row.price - (row.fee or 0.0)) * fx
+        if current_cutoff <= row.date <= today:
+            current[row.ticker] = current.get(row.ticker, 0.0) + net
+        elif prior_cutoff <= row.date < current_cutoff:
+            prior[row.ticker] = prior.get(row.ticker, 0.0) + net
+
+    growth = []
+    for ticker in sorted(set(current) | set(prior)):
+        cur = current.get(ticker, 0.0)
+        prev = prior.get(ticker, 0.0)
+        growth.append(
+            {
+                "ticker": ticker,
+                "trailing_12m_czk": cur,
+                "prior_12m_czk": prev,
+                "growth_pct": ((cur - prev) / prev * 100.0) if prev > 0 else None,
+            }
+        )
+
+    view.dividend_growth = sorted(growth, key=lambda g: -g["trailing_12m_czk"])
 
 
 def _fill_segment_allocation(db: Session, view: PortfolioView, user: User) -> None:

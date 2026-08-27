@@ -136,6 +136,10 @@ class PortfolioView:
     dividend_yield_on_cost_pct: float | None = None
     #: Same trailing-12-month total, split by instrument, sorted descending.
     dividends_by_instrument: list[dict] = field(default_factory=list)
+    #: Trailing 12 months vs. the 12 months before that, per instrument that
+    #: paid a dividend in either window. growth_pct is None when the prior
+    #: window paid nothing — there is no baseline to compute a rate against.
+    dividend_growth: list[dict] = field(default_factory=list)
 
     #: Open positions, and the same count split by asset class (e.g. {"STOCK": 16, "ETF": 2}).
     position_count: int = 0

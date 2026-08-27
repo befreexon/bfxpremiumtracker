@@ -144,6 +144,13 @@ export interface UpcomingDividend {
   cadence_days: number;
 }
 
+export interface DividendGrowth {
+  ticker: string;
+  trailing_12m_czk: number;
+  prior_12m_czk: number;
+  growth_pct: number | null;
+}
+
 export interface Overview {
   value_czk: number;
   invested_czk: number;
@@ -165,6 +172,7 @@ export interface Overview {
   dividend_yield_pct: number | null;
   dividend_yield_on_cost_pct: number | null;
   dividends_by_instrument: { ticker: string; value_czk: number }[];
+  dividend_growth: DividendGrowth[];
   position_count: number;
   position_count_by_class: Record<string, number>;
   ytd_sales_volume_czk: number;

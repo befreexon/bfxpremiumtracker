@@ -6,8 +6,8 @@
  */
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import type { Overview, UpcomingDividend } from '../../api/types';
-import { NUMERIC_STYLE, czk, percent } from '../../lib/format';
+import type { DividendGrowth, Overview, UpcomingDividend } from '../../api/types';
+import { NUMERIC_STYLE, TONE_COLOR_ON_DARK, arrowFor, czk, percent, toneFor } from '../../lib/format';
 import { CAPTION, EYEBROW, PANEL, PANEL_INSET, SECTION_TITLE } from './theme';
 
 const MONTH_NAMES = [
@@ -24,7 +24,8 @@ function monthLabel(key: string): string {
 export function Dividends({ data }: { data: Overview }) {
   const hasHistory = data.trailing_12m_dividends_czk > 0;
   const hasForecast = data.upcoming_dividends.length > 0;
-  if (!hasHistory && !hasForecast) return null;
+  const hasGrowthData = data.dividend_growth.length > 0;
+  if (!hasHistory && !hasForecast && !hasGrowthData) return null;
 
   return (
     <section style={PANEL}>
@@ -79,8 +80,54 @@ export function Dividends({ data }: { data: Overview }) {
         </>
       )}
 
+      <DividendGrowthTable rows={data.dividend_growth} />
+
       <DividendCalendar items={data.upcoming_dividends} />
     </section>
+  );
+}
+
+function DividendGrowthTable({ rows }: { rows: DividendGrowth[] }) {
+  if (rows.length === 0) return null;
+
+  return (
+    <div style={{ marginTop: 28 }}>
+      <h4 style={{ ...SECTION_TITLE, fontSize: 15 }}>Meziroční růst dividend</h4>
+      <p style={{ ...CAPTION, marginTop: 6 }}>
+        Posledních 12 měsíců oproti 12 měsícům před tím, podle skutečně přijatých plateb. U titulu
+        bez výplaty v předchozím období není k čemu srovnávat.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
+        {rows.map((row) => (
+          <div
+            key={row.ticker}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 14 }}
+          >
+            <span style={{ fontWeight: 600, width: 72 }}>{row.ticker}</span>
+            <span style={{ color: 'var(--on-dark-mute)', minWidth: 100, ...NUMERIC_STYLE }}>
+              {czk(row.trailing_12m_czk)}
+            </span>
+            <span style={{ color: 'var(--on-dark-mute)', fontSize: 13 }}>
+              ({czk(row.prior_12m_czk)} předtím)
+            </span>
+            {row.growth_pct !== null ? (
+              <span
+                style={{
+                  fontWeight: 600,
+                  minWidth: 70,
+                  ...NUMERIC_STYLE,
+                  color: TONE_COLOR_ON_DARK[toneFor(row.growth_pct)],
+                }}
+              >
+                {arrowFor(row.growth_pct)} {percent(row.growth_pct, 1, { withSign: true })}
+              </span>
+            ) : (
+              <span style={{ ...CAPTION, fontSize: 12 }}>nová výplata, bez srovnání</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
