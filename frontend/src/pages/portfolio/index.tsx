@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { overview as overviewApi, prices as priceApi, snapshots as snapshotApi } from '../../api/client';
 import type { Overview, Transaction } from '../../api/types';
 import { Button, Tabs } from '../../design/components';
@@ -168,6 +169,11 @@ export function PortfolioLayer() {
             naposledy {dateTime(refreshedAt)}
           </span>
         )}
+        <Link to="/vyrocni-zprava" target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto' }}>
+          <Button size="sm" variant="outline-dark">
+            Roční přehled ↗
+          </Button>
+        </Link>
       </div>
 
       {notice && <div style={{ fontSize: 14, color: 'var(--on-dark-mute)', lineHeight: 1.5 }}>{notice}</div>}
