@@ -243,6 +243,16 @@ export interface Goal {
   reached: boolean;
 }
 
+export interface Mover {
+  instrument_key: string;
+  ticker: string;
+  currency: string | null;
+  price: number | null;
+  move_pct: number | null;
+  move_czk: number | null;
+  error: string | null;
+}
+
 export type AlertType =
   | 'watchlist_target'
   | 'concentration'

@@ -270,6 +270,21 @@ class GoalResponse(BaseModel):
 
 
 # --------------------------------------------------------------------------
+# Today's biggest movers
+# --------------------------------------------------------------------------
+
+
+class MoverResponse(BaseModel):
+    instrument_key: str
+    ticker: str
+    currency: str | None
+    price: float | None
+    move_pct: float | None
+    move_czk: float | None
+    error: str | None
+
+
+# --------------------------------------------------------------------------
 # Segments ("Vlastní rozdělení" — the user's own custom breakdown)
 # --------------------------------------------------------------------------
 

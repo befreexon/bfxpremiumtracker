@@ -17,6 +17,7 @@ import type {
   ImportResult,
   ManualAsset,
   MarketQuote,
+  Mover,
   NetWorth,
   Note,
   Overview,
@@ -470,4 +471,10 @@ export const goals = {
     request<Goal>(`/api/goals/${id}`, json('PATCH', patch)),
 
   remove: (id: number) => request<void>(`/api/goals/${id}`, { method: 'DELETE' }),
+};
+
+// --- Today's biggest movers --------------------------------------------------
+
+export const movers = {
+  get: (portfolioIds?: number[]) => request<Mover[]>(`/api/movers${query({ portfolio_ids: portfolioIds })}`),
 };

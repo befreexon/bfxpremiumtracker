@@ -17,6 +17,7 @@ import { snapshots as snapshotApi } from '../../api/client';
 import type { AllocationSlice, BenchmarkComparison, Overview, Snapshot } from '../../api/types';
 import { Button } from '../../design/components';
 import { NUMERIC_STYLE, TONE_COLOR_ON_DARK, arrowFor, czk, date as formatDate, share, toneFor } from '../../lib/format';
+import { DailyMovers } from './DailyMovers';
 import { Dividends } from './Dividends';
 import { Rebalance } from './Rebalance';
 import { Segments } from './Segments';
@@ -37,6 +38,7 @@ export function Insights({ data, scopeIds, benchmarkTicker, onChanged }: Insight
       <ValueChart scopeIds={scopeIds} />
       <BenchmarkLine scopeIds={scopeIds} fallbackTicker={benchmarkTicker} />
       <InstrumentDonut slices={data.allocation_by_instrument} />
+      <DailyMovers scopeIds={scopeIds} />
       <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
         <Allocation title="Podle třídy aktiv" slices={data.allocation_by_class} />
         <Allocation title="Podle měny" slices={data.allocation_by_currency} />
